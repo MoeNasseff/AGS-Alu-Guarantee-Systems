@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ALU-REMINDERAPP | AGS - Alu-Guarantee Systems</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ags: {
+              teal: '#3ba8bf',
+              'teal-dark': '#2d8a9e',
+              'teal-light': '#5fc4d9',
+              navy: '#0d1b2a',
+              'navy-light': '#1b2d45',
+              'navy-mid': '#162236',
+              dark: '#0a1220',
+              gold: '#c8a951',
+              surface: '#111d2e',
+              border: '#1e3048',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    body { background: #0a1220; }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0d1b2a; }
+    ::-webkit-scrollbar-thumb { background: #3ba8bf44; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3ba8bf88; }
+
+    .glass { background: rgba(17, 29, 46, 0.8); backdrop-filter: blur(16px); border: 1px solid rgba(59, 168, 191, 0.12); }
+    .form-input { transition: all 0.2s ease; }
+    .form-input:focus { border-color: #3ba8bf; box-shadow: 0 0 0 3px rgba(59,168,191,0.12); }
+
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 15px rgba(59,168,191,0.1); } 50% { box-shadow: 0 0 25px rgba(59,168,191,0.25); } }
+    .animate-fade-in { animation: fadeInUp 0.5s ease-out; }
+    .card-glow:hover { animation: pulse-glow 2s ease-in-out infinite; }
+
+    .toast { transform: translateX(120%); transition: transform 0.3s ease; }
+    .toast.show { transform: translateX(0); }
+
+    .status-pending { background: #f59e0b15; color: #f59e0b; border: 1px solid #f59e0b30; }
+    .status-completed { background: #10b98115; color: #10b981; border: 1px solid #10b98130; }
+    .status-cancelled { background: #ef444415; color: #ef4444; border: 1px solid #ef444430; }
+
+    .source-web { background: #3ba8bf15; color: #3ba8bf; border: 1px solid #3ba8bf30; }
+    .source-telegram { background: #229ed915; color: #229ed9; border: 1px solid #229ed930; }
+    .source-whatsapp { background: #25d36615; color: #25d366; border: 1px solid #25d36630; }
+
+    .meeting-card { transition: all 0.3s ease; }
+    .meeting-card:hover { transform: translateY(-2px); border-color: rgba(59,168,191,0.3); }
+
+    .tab-active { color: #3ba8bf; border-color: #3ba8bf; background: rgba(59,168,191,0.08); }
+    .tab-inactive { color: #64748b; border-color: transparent; }
+    .tab-inactive:hover { color: #94a3b8; background: rgba(255,255,255,0.03); }
+  </style>
+</head>
+<body class="min-h-screen text-slate-300">
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed top-6 right-6 z-50 flex flex-col gap-3"></div>
+
+  <!-- Header -->
+  <header class="sticky top-0 z-40 glass border-b border-ags-border">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-ags-teal to-ags-teal-dark flex items-center justify-center">
+          <span class="text-white font-extrabold text-lg">A</span>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold text-white tracking-tight">ALU-REMINDERAPP</h1>
+          <p class="text-xs text-slate-500 tracking-widest uppercase">Meeting & Reminder Manager</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <a href="noteApp.html" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-ags-navy-light border border-ags-border hover:border-ags-teal/30 transition-all text-sm text-slate-400 hover:text-ags-teal">
+          <i data-lucide="file-text" class="w-4 h-4"></i>
+          <span>Note App</span>
+        </a>
+        <div class="w-px h-8 bg-ags-border"></div>
+        <div class="flex items-center gap-2">
+          <div class="flex -space-x-1">
+            <div class="w-6 h-6 rounded-full bg-[#25d366]/20 flex items-center justify-center" title="WhatsApp Bot">
+              <svg class="w-3.5 h-3.5 text-[#25d366]" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            </div>
+            <div class="w-6 h-6 rounded-full bg-[#229ed9]/20 flex items-center justify-center" title="Telegram Bot">
+              <svg class="w-3.5 h-3.5 text-[#229ed9]" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0h-.056zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 01.171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+            </div>
+          </div>
+          <span class="text-xs text-slate-500">Bot Connected</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-6 py-8">
+
+    <!-- Stats Row -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 animate-fade-in">
+      <div class="glass rounded-xl p-5 card-glow">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs text-slate-500 uppercase tracking-wider font-medium">Upcoming</span>
+          <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
+            <i data-lucide="clock" class="w-4 h-4 text-amber-400"></i>
+          </div>
+        </div>
+        <p class="text-2xl font-bold text-white" id="stat-pending">0</p>
+      </div>
+      <div class="glass rounded-xl p-5 card-glow">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs text-slate-500 uppercase tracking-wider font-medium">Completed</span>
+          <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+            <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+          </div>
+        </div>
+        <p class="text-2xl font-bold text-white" id="stat-completed">0</p>
+      </div>
+      <div class="glass rounded-xl p-5 card-glow">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs text-slate-500 uppercase tracking-wider font-medium">Via Bot</span>
+          <div class="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
+            <i data-lucide="bot" class="w-4 h-4 text-violet-400"></i>
+          </div>
+        </div>
+        <p class="text-2xl font-bold text-white" id="stat-bot">0</p>
+      </div>
+      <div class="glass rounded-xl p-5 card-glow">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs text-slate-500 uppercase tracking-wider font-medium">Reminders Sent</span>
+          <div class="w-8 h-8 rounded-lg bg-ags-teal/10 flex items-center justify-center">
+            <i data-lucide="send" class="w-4 h-4 text-ags-teal"></i>
+          </div>
+        </div>
+        <p class="text-2xl font-bold text-white" id="stat-sent">0</p>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex gap-1 mb-6 animate-fade-in" style="animation-delay:0.05s">
+      <button onclick="switchTab('form')" id="tab-form" class="tab-active px-5 py-2.5 rounded-xl text-sm font-medium border transition-all flex items-center gap-2">
+        <i data-lucide="calendar-plus" class="w-4 h-4"></i> New Meeting
+      </button>
+      <button onclick="switchTab('list')" id="tab-list" class="tab-inactive px-5 py-2.5 rounded-xl text-sm font-medium border transition-all flex items-center gap-2">
+        <i data-lucide="list" class="w-4 h-4"></i> All Meetings
+      </button>
+      <button onclick="switchTab('bot')" id="tab-bot" class="tab-inactive px-5 py-2.5 rounded-xl text-sm font-medium border transition-all flex items-center gap-2">
+        <i data-lucide="message-circle" class="w-4 h-4"></i> Bot Instructions
+      </button>
+    </div>
+
+    <!-- Tab: New Meeting Form -->
+    <div id="panel-form" class="glass rounded-2xl p-6 mb-8 animate-fade-in" style="animation-delay:0.1s">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="w-8 h-8 rounded-lg bg-ags-teal/10 flex items-center justify-center">
+          <i data-lucide="calendar-plus" class="w-4 h-4 text-ags-teal"></i>
+        </div>
+        <h2 class="text-lg font-semibold text-white">Schedule New Meeting</h2>
+      </div>
+
+      <form id="meetingForm" class="space-y-5">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <!-- Meeting Title -->
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Meeting Title</label>
+            <input type="text" id="meetTitle" required placeholder="e.g. Facade Review - Bank of Cairo" class="form-input w-full bg-ags-dark border border-ags-border rounded-xl px-4 py-3 text-sm text-slate-200 placeholder-slate-600 focus:outline-none">
+          </div>
+          <!-- Date & Time -->
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Date & Time</label>
+            <input type="datetime-local" id="meetDate" required class="form-input w-full bg-ags-dark border border-ags-border rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <!-- Contact Person -->
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Contact Person</label>
+            <input type="text" id="meetContact" required placeholder="Full name" class="form-input w-full bg-ags-dark border border-ags-border rounded-xl px-4 py-3 text-sm text-slate-200 placeholder-slate-600 focus:outline-none">
+          </div>
+          <!-- Contact Email -->
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Contact Email</label>
+            <input type="email" id="meetEmail" placeholder="email@example.com" class="form-input w-full bg-ags-dark border border-ags-border rounded-xl px-4 py-3 text-sm text-slate-200 placeholder-slate-600 focus:outline-none">
+          </div>
+          <!-- Contact Phone -->
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Contact Phone</label>
+            <input type="tel" id="meetPhone" placeholder="+20 1xx xxx xxxx" class="form-input w-full bg-ags-dark border border-ags-border rounded-xl px-4 py-3 text-sm text-slate-200 placeholder-slate-600 focus:outline-none">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <!-- Location Name -->
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Location</label>
+            <input type="text" id="meetLocation" placeholder="e.g. AGS Factory, 6th October City" class="form-input w-full bg-ags-dark border border-ags-border rounded-xl px-4 py-3 text-sm text-slate-200 placeholder-slate-600 focus:outline-none">
+          </div>
+          <!-- Google Maps URL -->
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Google Maps Link</label>
+            <input type="url" id="meetMapUrl" placeholder="https://maps.google.com/?q=..." class="form-input w-full bg-ags-dark border border-ags-border rounded-xl px-4 py-3 text-sm text-slate-200 placeholder-slate-600 focus:outline-none">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
+          <!-- Meeting Info -->
+          <div class="md:col-span-3">
+            <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Meeting Details</label>
+            <textarea id="meetInfo" rows="3" required placeholder="Agenda, discussion points, preparation needed..." class="form-input w-full bg-ags-dark border border-ags-border rounded-xl px-4 py-3 text-sm text-slate-200 placeholder-slate-600 focus:outline-none resize-none"></textarea>
+          </div>
+          <!-- Created By -->
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Created By</label>
+            <select id="meetCreatedBy" class="form-input w-full bg-ags-dark border border-ags-border rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none appearance-none cursor-pointer">
+              <option value="">Select...</option>
+            </select>
+            <p class="text-xs text-slate-600 mt-1">Optional</p>
+          </div>
+        </div>
+
+        <!-- Notification Channels -->
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-3 uppercase tracking-wider">Notification Channels (1hr before meeting)</label>
+          <div class="flex flex-wrap gap-3">
+            <label class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-ags-border bg-ags-dark hover:border-ags-teal/30 transition-all cursor-pointer">
+              <input type="checkbox" id="notifyEmail" checked class="accent-ags-teal w-4 h-4">
+              <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+              <span class="text-sm text-slate-300">Email</span>
+            </label>
+            <label class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-ags-border bg-ags-dark hover:border-[#25d366]/30 transition-all cursor-pointer">
+              <input type="checkbox" id="notifyWhatsapp" checked class="accent-[#25d366] w-4 h-4">
+              <svg class="w-4 h-4 text-[#25d366]" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              <span class="text-sm text-slate-300">WhatsApp</span>
+            </label>
+            <label class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-ags-border bg-ags-dark hover:border-[#229ed9]/30 transition-all cursor-pointer">
+              <input type="checkbox" id="notifyTelegram" checked class="accent-[#229ed9] w-4 h-4">
+              <svg class="w-4 h-4 text-[#229ed9]" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0h-.056zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 01.171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+              <span class="text-sm text-slate-300">Telegram</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-2">
+          <button type="button" onclick="resetMeetingForm()" class="px-5 py-2.5 rounded-xl text-sm text-slate-400 hover:text-slate-200 border border-ags-border hover:border-slate-500 transition-all">
+            Clear
+          </button>
+          <button type="submit" class="px-6 py-2.5 rounded-xl text-sm font-medium text-white bg-gradient-to-r from-ags-teal to-ags-teal-dark hover:from-ags-teal-dark hover:to-ags-teal transition-all shadow-lg shadow-ags-teal/20 flex items-center gap-2">
+            <i data-lucide="calendar-check" class="w-4 h-4"></i>
+            Schedule Meeting
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Tab: All Meetings List -->
+    <div id="panel-list" class="hidden animate-fade-in">
+      <!-- Filter Bar -->
+      <div class="glass rounded-2xl p-4 mb-4 flex flex-wrap items-center gap-3">
+        <div class="flex items-center gap-2 text-xs text-slate-500">
+          <i data-lucide="filter" class="w-3.5 h-3.5"></i>
+          Filter:
+        </div>
+        <button onclick="filterMeetings('all')" class="filter-btn filter-active px-3 py-1.5 rounded-lg text-xs font-medium transition-all" data-filter="all">All</button>
+        <button onclick="filterMeetings('pending')" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-amber-400 transition-all" data-filter="pending">Pending</button>
+        <button onclick="filterMeetings('completed')" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-emerald-400 transition-all" data-filter="completed">Completed</button>
+        <button onclick="filterMeetings('cancelled')" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-red-400 transition-all" data-filter="cancelled">Cancelled</button>
+        <div class="flex-1"></div>
+        <button onclick="refreshMeetings()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-ags-teal border border-ags-border hover:border-ags-teal/30 transition-all">
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh
+        </button>
+      </div>
+
+      <!-- Meetings Grid -->
+      <div id="meetingsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Populated by JS -->
+      </div>
+      <div id="noMeetings" class="hidden glass rounded-2xl p-12 text-center">
+        <i data-lucide="calendar-x" class="w-12 h-12 text-slate-600 mx-auto mb-4"></i>
+        <p class="text-slate-500">No meetings found.</p>
+      </div>
+    </div>
+
+    <!-- Tab: Bot Instructions -->
+    <div id="panel-bot" class="hidden animate-fade-in">
+      <div class="glass rounded-2xl p-6">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
+            <i data-lucide="message-circle" class="w-4 h-4 text-violet-400"></i>
+          </div>
+          <h2 class="text-lg font-semibold text-white">How to Use the Bot</h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- WhatsApp -->
+          <div class="rounded-xl border border-[#25d366]/20 bg-[#25d366]/5 p-5">
+            <div class="flex items-center gap-3 mb-4">
+              <svg class="w-6 h-6 text-[#25d366]" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              <h3 class="text-white font-semibold">WhatsApp Bot</h3>
+            </div>
+            <p class="text-sm text-slate-400 mb-4">Send a message to the AGS Reminder Bot on WhatsApp with this format:</p>
+            <div class="bg-black/30 rounded-lg p-4 font-mono text-xs text-slate-300 space-y-1">
+              <p class="text-[#25d366]">/meeting</p>
+              <p>Title: Facade Review</p>
+              <p>Date: 2026-02-20 10:00</p>
+              <p>Contact: Eng. Ahmed Hassan</p>
+              <p>Location: AGS Factory</p>
+              <p>Map: https://maps.google.com/...</p>
+              <p>Info: Review curtain wall specs</p>
+            </div>
+            <p class="text-xs text-slate-500 mt-3">Bot number will be configured after n8n setup.</p>
+          </div>
+
+          <!-- Telegram -->
+          <div class="rounded-xl border border-[#229ed9]/20 bg-[#229ed9]/5 p-5">
+            <div class="flex items-center gap-3 mb-4">
+              <svg class="w-6 h-6 text-[#229ed9]" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0h-.056zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 01.171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+              <h3 class="text-white font-semibold">Telegram Bot</h3>
+            </div>
+            <p class="text-sm text-slate-400 mb-4">Send a message to <span class="text-[#229ed9]">@AGSReminderBot</span> on Telegram:</p>
+            <div class="bg-black/30 rounded-lg p-4 font-mono text-xs text-slate-300 space-y-1">
+              <p class="text-[#229ed9]">/meeting</p>
+              <p>Title: Supplier Discussion</p>
+              <p>Date: 2026-02-25 14:00</p>
+              <p>Contact: Mr. Abdullah</p>
+              <p>Location: Virtual - Teams</p>
+              <p>Map: https://teams.microsoft.com</p>
+              <p>Info: Q2 pricing negotiation</p>
+            </div>
+            <p class="text-xs text-slate-500 mt-3">Bot will be created via @BotFather after n8n setup.</p>
+          </div>
+        </div>
+
+        <!-- n8n Flow Info -->
+        <div class="mt-6 rounded-xl border border-ags-border bg-ags-dark/50 p-5">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
+              <svg class="w-4 h-4 text-orange-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+            </div>
+            <h3 class="text-white font-semibold">n8n Automation Flow</h3>
+            <span class="px-2 py-0.5 rounded-md text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20">Setup Required</span>
+          </div>
+          <div class="text-sm text-slate-400 space-y-2">
+            <p>The n8n automation handles:</p>
+            <ul class="space-y-1.5 ml-4">
+              <li class="flex items-start gap-2"><span class="text-ags-teal mt-0.5">●</span> Receiving messages from WhatsApp & Telegram bots</li>
+              <li class="flex items-start gap-2"><span class="text-ags-teal mt-0.5">●</span> Parsing meeting details and saving to Supabase</li>
+              <li class="flex items-start gap-2"><span class="text-ags-teal mt-0.5">●</span> Scheduling reminders (2-3 notifications, 1hr before meeting)</li>
+              <li class="flex items-start gap-2"><span class="text-ags-teal mt-0.5">●</span> Sending reminders via Email, WhatsApp, and Telegram simultaneously</li>
+            </ul>
+            <p class="text-xs text-slate-500 mt-3">Deploy n8n on Railway (free tier) → Connect Telegram Bot + WhatsApp Business API → Import the provided workflow JSON.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="mt-12 border-t border-ags-border py-6">
+    <div class="max-w-7xl mx-auto px-6 flex items-center justify-between text-xs text-slate-600">
+      <span>&copy; 2026 AGS - Alu-Guarantee Systems. All rights reserved.</span>
+      <span>ALU-REMINDERAPP v1.0</span>
+    </div>
+  </footer>
+
+  <!-- Status Update Modal -->
+  <div id="statusModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div class="glass rounded-2xl p-6 max-w-sm w-full mx-4 animate-fade-in">
+      <h3 class="text-lg font-semibold text-white mb-4">Update Status</h3>
+      <div class="space-y-2" id="statusOptions"></div>
+      <div class="flex justify-end mt-4">
+        <button onclick="closeStatusModal()" class="px-4 py-2 rounded-xl text-sm text-slate-400 border border-ags-border hover:border-slate-500 transition-all">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // ─── Supabase Config ───────────────────────────────────────────────────────
+  const SUPABASE_URL = 'https://iniqnmvdkgqbkfiduqdx.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImluaXFubXZka2dxYmtmaWR1cWR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA1ODIzMjUsImV4cCI6MjA4NjE1ODMyNX0.LqGQ6Qbx22_q1qxlzvjR4IyKHZRM54PEHQRRovpLVRE';
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // ─── State ─────────────────────────────────────────────────────────────────
+  let meetings = [];
+  let employees = [];
+  let currentFilter = 'all';
+  let statusTargetId = null;
+
+  // ─── Init ──────────────────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', async () => {
+    lucide.createIcons();
+    await loadEmployees();
+    await loadMeetings();
+    setupForm();
+
+    // Subscribe to real-time meeting inserts (from bot)
+    supabase
+      .channel('meetings-realtime')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'meetings' }, (payload) => {
+        showToast(`New meeting via ${payload.new.source}: ${payload.new.title}`, 'info');
+        loadMeetings();
+      })
+      .subscribe();
+  });
+
+  // ─── Load Employees ──────────────────────────────────────────────────────
+  async function loadEmployees() {
+    const { data } = await supabase.from('employees').select('*').order('name');
+    employees = data || [];
+    const select = document.getElementById('meetCreatedBy');
+    employees.forEach(e => {
+      select.innerHTML += `<option value="${e.id}">${e.name} — ${e.title}</option>`;
+    });
+  }
+
+  // ─── Load Meetings ───────────────────────────────────────────────────────
+  async function loadMeetings() {
+    const { data, error } = await supabase
+      .from('meetings')
+      .select('*, employees(name, title)')
+      .order('meeting_date', { ascending: true });
+
+    if (error) { showToast('Failed to load meetings', 'error'); return; }
+    meetings = data || [];
+    updateStats();
+    renderMeetings();
+  }
+
+  // ─── Update Stats ────────────────────────────────────────────────────────
+  function updateStats() {
+    document.getElementById('stat-pending').textContent = meetings.filter(m => m.status === 'pending').length;
+    document.getElementById('stat-completed').textContent = meetings.filter(m => m.status === 'completed').length;
+    document.getElementById('stat-bot').textContent = meetings.filter(m => m.source !== 'web').length;
+    document.getElementById('stat-sent').textContent = meetings.reduce((s, m) => s + (m.reminder_count || 0), 0);
+  }
+
+  // ─── Render Meetings ─────────────────────────────────────────────────────
+  function renderMeetings() {
+    const grid = document.getElementById('meetingsGrid');
+    const noMsg = document.getElementById('noMeetings');
+    const filtered = currentFilter === 'all' ? meetings : meetings.filter(m => m.status === currentFilter);
+
+    if (filtered.length === 0) {
+      grid.innerHTML = '';
+      noMsg.classList.remove('hidden');
+      return;
+    }
+
+    noMsg.classList.add('hidden');
+    grid.innerHTML = filtered.map(m => {
+      const date = new Date(m.meeting_date);
+      const isPast = date < new Date();
+      const isToday = date.toDateString() === new Date().toDateString();
+      const timeLeft = getTimeLeft(date);
+
+      return `
+        <div class="meeting-card glass rounded-xl p-5 relative overflow-hidden">
+          ${isToday && m.status === 'pending' ? '<div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-ags-teal via-ags-teal-light to-ags-teal animate-pulse"></div>' : ''}
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex-1">
+              <h3 class="text-white font-semibold text-sm">${escapeHtml(m.title)}</h3>
+              <div class="flex items-center gap-2 mt-1.5">
+                <span class="status-${m.status} px-2 py-0.5 rounded-md text-xs font-medium">${m.status}</span>
+                <span class="source-${m.source} px-2 py-0.5 rounded-md text-xs font-medium">${m.source}</span>
+                ${m.reminder_sent ? '<span class="text-xs text-emerald-400">✓ Reminded</span>' : ''}
+              </div>
+            </div>
+            <button onclick="openStatusModal('${m.id}', '${m.status}')" class="p-1.5 rounded-lg hover:bg-white/5 text-slate-500 hover:text-ags-teal transition-all" title="Change status">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+            </button>
+          </div>
+
+          <div class="space-y-2 text-sm">
+            <div class="flex items-center gap-2 text-slate-400">
+              <svg class="w-3.5 h-3.5 text-ags-teal shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+              <span>${date.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })} at ${date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
+              ${!isPast && m.status === 'pending' ? `<span class="text-xs text-ags-teal ml-auto">${timeLeft}</span>` : ''}
+            </div>
+            <div class="flex items-center gap-2 text-slate-400">
+              <svg class="w-3.5 h-3.5 text-ags-teal shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span>${escapeHtml(m.contact_person || 'N/A')}</span>
+              ${m.contact_phone ? `<span class="text-slate-600 text-xs">${m.contact_phone}</span>` : ''}
+            </div>
+            ${m.location_name ? `
+            <div class="flex items-center gap-2 text-slate-400">
+              <svg class="w-3.5 h-3.5 text-ags-teal shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              ${m.location_url ? `<a href="${m.location_url}" target="_blank" class="hover:text-ags-teal transition-colors">${escapeHtml(m.location_name)}</a>` : `<span>${escapeHtml(m.location_name)}</span>`}
+            </div>` : ''}
+            ${m.meeting_info ? `
+            <div class="pt-2 mt-2 border-t border-ags-border/50">
+              <p class="text-xs text-slate-500 line-clamp-2">${escapeHtml(m.meeting_info)}</p>
+            </div>` : ''}
+          </div>
+
+          ${m.employees ? `
+          <div class="mt-3 pt-3 border-t border-ags-border/50 flex items-center gap-2">
+            <div class="w-5 h-5 rounded-full bg-ags-teal/15 flex items-center justify-center text-[10px] font-bold text-ags-teal">${m.employees.name[0]}</div>
+            <span class="text-xs text-slate-500">by ${m.employees.name}</span>
+          </div>` : ''}
+        </div>`;
+    }).join('');
+  }
+
+  // ─── Tab Switching ────────────────────────────────────────────────────────
+  function switchTab(tab) {
+    ['form', 'list', 'bot'].forEach(t => {
+      document.getElementById(`panel-${t}`).classList.toggle('hidden', t !== tab);
+      const tabBtn = document.getElementById(`tab-${t}`);
+      tabBtn.classList.toggle('tab-active', t === tab);
+      tabBtn.classList.toggle('tab-inactive', t !== tab);
+    });
+    if (tab === 'list') renderMeetings();
+    lucide.createIcons();
+  }
+
+  // ─── Filter Meetings ─────────────────────────────────────────────────────
+  function filterMeetings(status) {
+    currentFilter = status;
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      const isActive = btn.dataset.filter === status;
+      btn.classList.toggle('filter-active', isActive);
+      btn.classList.toggle('text-ags-teal', isActive);
+      btn.classList.toggle('bg-ags-teal/10', isActive);
+      btn.classList.toggle('text-slate-500', !isActive);
+    });
+    renderMeetings();
+  }
+
+  // ─── Form Submit ──────────────────────────────────────────────────────────
+  function setupForm() {
+    document.getElementById('meetingForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const title = document.getElementById('meetTitle').value.trim();
+      const meetDate = document.getElementById('meetDate').value;
+      const contact = document.getElementById('meetContact').value.trim();
+      const email = document.getElementById('meetEmail').value.trim();
+      const phone = document.getElementById('meetPhone').value.trim();
+      const location = document.getElementById('meetLocation').value.trim();
+      const mapUrl = document.getElementById('meetMapUrl').value.trim();
+      const info = document.getElementById('meetInfo').value.trim();
+      const createdBy = document.getElementById('meetCreatedBy').value || null;
+
+      if (!title || !meetDate || !contact || !info) {
+        showToast('Please fill all required fields', 'error');
+        return;
+      }
+
+      const { error } = await supabase.from('meetings').insert({
+        title,
+        meeting_date: new Date(meetDate).toISOString(),
+        contact_person: contact,
+        contact_email: email || null,
+        contact_phone: phone || null,
+        location_name: location || null,
+        location_url: mapUrl || null,
+        meeting_info: info,
+        created_by: createdBy,
+        source: 'web'
+      });
+
+      if (error) {
+        showToast('Failed to schedule: ' + error.message, 'error');
+        return;
+      }
+
+      showToast('Meeting scheduled successfully!', 'success');
+      resetMeetingForm();
+      await loadMeetings();
+    });
+  }
+
+  // ─── Status Modal ────────────────────────────────────────────────────────
+  function openStatusModal(id, current) {
+    statusTargetId = id;
+    const statuses = ['pending', 'completed', 'cancelled'];
+    const colors = { pending: 'amber', completed: 'emerald', cancelled: 'red' };
+    const modal = document.getElementById('statusModal');
+    const options = document.getElementById('statusOptions');
+
+    options.innerHTML = statuses.map(s => `
+      <button onclick="updateMeetingStatus('${s}')" class="w-full text-left px-4 py-3 rounded-xl text-sm flex items-center gap-3 transition-all
+        ${s === current ? 'bg-white/5 border border-ags-border' : 'hover:bg-white/5'}">
+        <span class="w-2 h-2 rounded-full bg-${colors[s]}-400"></span>
+        <span class="text-slate-200 capitalize">${s}</span>
+        ${s === current ? '<span class="ml-auto text-xs text-slate-500">Current</span>' : ''}
+      </button>
+    `).join('');
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+
+  function closeStatusModal() {
+    document.getElementById('statusModal').classList.add('hidden');
+    document.getElementById('statusModal').classList.remove('flex');
+    statusTargetId = null;
+  }
+
+  async function updateMeetingStatus(status) {
+    if (!statusTargetId) return;
+    const { error } = await supabase.from('meetings').update({ status }).eq('id', statusTargetId);
+    if (error) { showToast('Update failed', 'error'); }
+    else { showToast(`Status updated to ${status}`, 'success'); await loadMeetings(); }
+    closeStatusModal();
+  }
+
+  // ─── Helpers ──────────────────────────────────────────────────────────────
+  function resetMeetingForm() { document.getElementById('meetingForm').reset(); }
+  function refreshMeetings() { loadMeetings(); showToast('Meetings refreshed', 'info'); }
+
+  function getTimeLeft(date) {
+    const diff = date - new Date();
+    if (diff < 0) return 'Overdue';
+    const days = Math.floor(diff / 86400000);
+    const hours = Math.floor((diff % 86400000) / 3600000);
+    if (days > 0) return `${days}d ${hours}h`;
+    const mins = Math.floor((diff % 3600000) / 60000);
+    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+  }
+
+  function showToast(message, type = 'info') {
+    const colors = {
+      success: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
+      error: 'border-red-500/30 bg-red-500/10 text-red-300',
+      info: 'border-ags-teal/30 bg-ags-teal/10 text-ags-teal'
+    };
+    const icons = { success: '✓', error: '✕', info: 'ℹ' };
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast glass rounded-xl px-5 py-3 border ${colors[type]} flex items-center gap-3 text-sm shadow-xl min-w-[280px]`;
+    toast.innerHTML = `<span class="font-bold text-lg">${icons[type]}</span><span>${message}</span>`;
+    container.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('show'));
+    setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3000);
+  }
+</script>
+
+</body>
+</html>

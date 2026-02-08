@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ALU-NOTEAPP | AGS - Alu-Guarantee Systems</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ags: {
+              teal: '#3ba8bf',
+              'teal-dark': '#2d8a9e',
+              'teal-light': '#5fc4d9',
+              navy: '#0d1b2a',
+              'navy-light': '#1b2d45',
+              'navy-mid': '#162236',
+              dark: '#0a1220',
+              gold: '#c8a951',
+              surface: '#111d2e',
+              border: '#1e3048',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- DataTables CSS & JS -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    body { background: #0a1220; }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0d1b2a; }
+    ::-webkit-scrollbar-thumb { background: #3ba8bf44; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3ba8bf88; }
+
+    /* Glass card */
+    .glass { background: rgba(17, 29, 46, 0.8); backdrop-filter: blur(16px); border: 1px solid rgba(59, 168, 191, 0.12); }
+
+    /* DataTables overrides */
+    .dataTables_wrapper { color: #94a3b8; }
+    table.dataTable { border-collapse: collapse !important; }
+    table.dataTable thead th { background: #0d1b2a !important; color: #3ba8bf !important; border-bottom: 2px solid #1e3048 !important; padding: 14px 16px !important; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    table.dataTable tbody td { background: #111d2e !important; color: #cbd5e1 !important; border-bottom: 1px solid #1e3048 !important; padding: 12px 16px !important; font-size: 0.875rem; }
+    table.dataTable tbody tr:hover td { background: #162a40 !important; }
+    table.dataTable tbody tr.selected td { background: #1a3550 !important; }
+    .dataTables_filter input { background: #0d1b2a !important; border: 1px solid #1e3048 !important; color: #cbd5e1 !important; border-radius: 8px !important; padding: 8px 14px !important; outline: none !important; }
+    .dataTables_filter input:focus { border-color: #3ba8bf !important; box-shadow: 0 0 0 2px rgba(59,168,191,0.15) !important; }
+    .dataTables_filter label { color: #64748b !important; }
+    .dataTables_length select { background: #0d1b2a !important; border: 1px solid #1e3048 !important; color: #cbd5e1 !important; border-radius: 6px !important; padding: 6px 10px !important; }
+    .dataTables_length label { color: #64748b !important; }
+    .dataTables_info { color: #475569 !important; font-size: 0.8rem !important; }
+    .dataTables_paginate .paginate_button { color: #64748b !important; border: 1px solid #1e3048 !important; border-radius: 6px !important; background: #0d1b2a !important; margin: 0 2px !important; }
+    .dataTables_paginate .paginate_button:hover { background: #162a40 !important; color: #3ba8bf !important; border-color: #3ba8bf44 !important; }
+    .dataTables_paginate .paginate_button.current { background: #3ba8bf !important; color: #fff !important; border-color: #3ba8bf !important; }
+    .dataTables_paginate .paginate_button.disabled { opacity: 0.3 !important; }
+    .dataTables_empty { color: #475569 !important; }
+
+    /* Form styles */
+    .form-input { transition: all 0.2s ease; }
+    .form-input:focus { border-color: #3ba8bf; box-shadow: 0 0 0 3px rgba(59,168,191,0.12); }
+
+    /* Animations */
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 15px rgba(59,168,191,0.1); } 50% { box-shadow: 0 0 25px rgba(59,168,191,0.25); } }
+    .animate-fade-in { animation: fadeInUp 0.5s ease-out; }
+    .card-glow:hover { animation: pulse-glow 2s ease-in-out infinite; }
+
+    /* Toast */
+    .toast { transform: translateX(120%); transition: transform 0.3s ease; }
+    .toast.show { transform: translateX(0); }
+
+    /* Badge */
+    .badge-expenditure { background: linear-gradient(135deg, #3ba8bf22, #3ba8bf08); border: 1px solid #3ba8bf33; }
+  </style>
+</head>
+<body class="min-h-screen text-slate-300">
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed top-6 right-6 z-50 flex flex-col gap-3"></div>
+
+  <!-- Header -->
+  <header class="sticky top-0 z-40 glass border-b border-ags-border">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-ags-teal to-ags-teal-dark flex items-center justify-center">
+          <span class="text-white font-extrabold text-lg">A</span>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold text-white tracking-tight">ALU-NOTEAPP</h1>
+          <p class="text-xs text-slate-500 tracking-widest uppercase">Alu-Guarantee Systems</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <a href="reminderApp.html" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-ags-navy-light border border-ags-border hover:border-ags-teal/30 transition-all text-sm text-slate-400 hover:text-ags-teal">
+          <i data-lucide="bell" class="w-4 h-4"></i>
+          <span>Reminder App</span>
+        </a>
+        <div class="w-px h-8 bg-ags-border"></div>
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-ags-teal/20 flex items-center justify-center">
+            <i data-lucide="user" class="w-4 h-4 text-ags-teal"></i>
+          </div>
+          <select id="currentUser" class="bg-transparent border-none text-sm text-slate-300 focus:outline-none cursor-pointer">
+          </select>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-6 py-8">
+
+    <!-- Stats Row -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 animate-fade-in">
+      <div class="glass rounded-xl p-5 card-glow">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs text-slate-500 uppercase tracking-wider font-medium">Total Notes</span>
+          <div class="w-8 h-8 rounded-lg bg-ags-teal/10 flex items-center justify-center">
+            <i data-lucide="file-text" class="w-4 h-4 text-ags-teal"></i>
+          </div>
+        </div>
+        <p class="text-2xl font-bold text-white" id="stat-total">0</p>
+      </div>
+      <div class="glass rounded-xl p-5 card-glow">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs text-slate-500 uppercase tracking-wider font-medium">Departments</span>
+          <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+            <i data-lucide="building-2" class="w-4 h-4 text-emerald-400"></i>
+          </div>
+        </div>
+        <p class="text-2xl font-bold text-white" id="stat-depts">0</p>
+      </div>
+      <div class="glass rounded-xl p-5 card-glow">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs text-slate-500 uppercase tracking-wider font-medium">Employees</span>
+          <div class="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
+            <i data-lucide="users" class="w-4 h-4 text-violet-400"></i>
+          </div>
+        </div>
+        <p class="text-2xl font-bold text-white" id="stat-employees">0</p>
+      </div>
+      <div class="glass rounded-xl p-5 card-glow">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs text-slate-500 uppercase tracking-wider font-medium">Total Expenditure</span>
+          <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
+            <i data-lucide="banknote" class="w-4 h-4 text-amber-400"></i>
+          </div>
+        </div>
+        <p class="text-2xl font-bold text-white" id="stat-expenditure">EGP 0</p>
+      </div>
+    </div>
+
+    <!-- Form Section -->
+    <div class="glass rounded-2xl p-6 mb-8 animate-fade-in" style="animation-delay: 0.1s">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="w-8 h-8 rounded-lg bg-ags-teal/10 flex items-center justify-center">
+          <i data-lucide="plus-circle" class="w-4 h-4 text-ags-teal"></i>
+        </div>
+        <h2 class="text-lg font-semibold text-white">Add New Note</h2>
+      </div>
+
+      <form id="noteForm" class="space-y-5">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <!-- Employee -->
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Employee</label>
+            <select id="employeeSelect" required class="form-input w-full bg-ags-dark border border-ags-border rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none appearance-none cursor-pointer">
+              <option value="">Select Employee...</option>
+            </select>
+          </div>
+          <!-- Department -->
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Department</label>
+            <select id="departmentSelect" required class="form-input w-full bg-ags-dark border border-ags-border rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none appearance-none cursor-pointer">
+              <option value="">Select Department...</option>
+            </select>
+          </div>
+          <!-- Title -->
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Note Title</label>
+            <input type="text" id="noteTitle" required placeholder="Enter note title..." class="form-input w-full bg-ags-dark border border-ags-border rounded-xl px-4 py-3 text-sm text-slate-200 placeholder-slate-600 focus:outline-none">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
+          <!-- Note Content -->
+          <div class="md:col-span-3">
+            <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Note Content</label>
+            <textarea id="noteContent" rows="3" required placeholder="Write your note here..." class="form-input w-full bg-ags-dark border border-ags-border rounded-xl px-4 py-3 text-sm text-slate-200 placeholder-slate-600 focus:outline-none resize-none"></textarea>
+          </div>
+          <!-- Expenditure -->
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Expenditure (EGP)</label>
+            <input type="number" id="noteExpenditure" min="0" step="0.01" value="0" class="form-input w-full bg-ags-dark border border-ags-border rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none">
+            <p class="text-xs text-slate-600 mt-1">Optional field</p>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-2">
+          <button type="button" onclick="resetForm()" class="px-5 py-2.5 rounded-xl text-sm text-slate-400 hover:text-slate-200 border border-ags-border hover:border-slate-500 transition-all">
+            Clear
+          </button>
+          <button type="submit" class="px-6 py-2.5 rounded-xl text-sm font-medium text-white bg-gradient-to-r from-ags-teal to-ags-teal-dark hover:from-ags-teal-dark hover:to-ags-teal transition-all shadow-lg shadow-ags-teal/20 flex items-center gap-2">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            Save Note
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Notes Table Section -->
+    <div class="glass rounded-2xl p-6 animate-fade-in" style="animation-delay: 0.2s">
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-ags-teal/10 flex items-center justify-center">
+            <i data-lucide="table" class="w-4 h-4 text-ags-teal"></i>
+          </div>
+          <h2 class="text-lg font-semibold text-white">Notes Registry</h2>
+        </div>
+        <button onclick="refreshNotes()" class="flex items-center gap-2 px-4 py-2 rounded-lg text-xs text-slate-400 hover:text-ags-teal border border-ags-border hover:border-ags-teal/30 transition-all">
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+          Refresh
+        </button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table id="notesTable" class="w-full stripe hover" style="width:100%">
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Title</th>
+              <th>Department</th>
+              <th>Note</th>
+              <th>Expenditure</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="mt-12 border-t border-ags-border py-6">
+    <div class="max-w-7xl mx-auto px-6 flex items-center justify-between text-xs text-slate-600">
+      <span>&copy; 2026 AGS - Alu-Guarantee Systems. All rights reserved.</span>
+      <span>ALU-NOTEAPP v1.0</span>
+    </div>
+  </footer>
+
+  <!-- Delete Confirmation Modal -->
+  <div id="deleteModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div class="glass rounded-2xl p-6 max-w-md w-full mx-4 animate-fade-in">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center">
+          <i data-lucide="trash-2" class="w-5 h-5 text-red-400"></i>
+        </div>
+        <h3 class="text-lg font-semibold text-white">Delete Note</h3>
+      </div>
+      <p class="text-sm text-slate-400 mb-6">Are you sure you want to delete this note? This action cannot be undone.</p>
+      <div class="flex justify-end gap-3">
+        <button onclick="closeDeleteModal()" class="px-4 py-2 rounded-xl text-sm text-slate-400 border border-ags-border hover:border-slate-500 transition-all">Cancel</button>
+        <button id="confirmDeleteBtn" class="px-4 py-2 rounded-xl text-sm text-white bg-red-500 hover:bg-red-600 transition-all">Delete</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // ─── Supabase Config ───────────────────────────────────────────────────────
+  const SUPABASE_URL = 'https://iniqnmvdkgqbkfiduqdx.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImluaXFubXZka2dxYmtmaWR1cWR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA1ODIzMjUsImV4cCI6MjA4NjE1ODMyNX0.LqGQ6Qbx22_q1qxlzvjR4IyKHZRM54PEHQRRovpLVRE';
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // ─── State ─────────────────────────────────────────────────────────────────
+  let departments = [];
+  let employees = [];
+  let notesTable = null;
+  let deleteTargetId = null;
+
+  // ─── Init ──────────────────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', async () => {
+    lucide.createIcons();
+    await loadDropdowns();
+    await loadNotes();
+    setupForm();
+    setupEmployeeDeptSync();
+  });
+
+  // ─── Load Dropdowns ───────────────────────────────────────────────────────
+  async function loadDropdowns() {
+    const [deptRes, empRes] = await Promise.all([
+      supabase.from('departments').select('*').order('name'),
+      supabase.from('employees').select('*, departments(name)').order('name')
+    ]);
+
+    departments = deptRes.data || [];
+    employees = empRes.data || [];
+
+    // Populate department dropdown
+    const deptSelect = document.getElementById('departmentSelect');
+    departments.forEach(d => {
+      deptSelect.innerHTML += `<option value="${d.id}">${d.name}</option>`;
+    });
+
+    // Populate employee dropdown
+    const empSelect = document.getElementById('employeeSelect');
+    employees.forEach(e => {
+      empSelect.innerHTML += `<option value="${e.id}" data-dept="${e.department_id}">${e.name} — ${e.title}</option>`;
+    });
+
+    // Populate current user selector
+    const userSelect = document.getElementById('currentUser');
+    employees.forEach(e => {
+      userSelect.innerHTML += `<option value="${e.id}">${e.name}</option>`;
+    });
+
+    // Update stats
+    document.getElementById('stat-depts').textContent = departments.length;
+    document.getElementById('stat-employees').textContent = employees.length;
+  }
+
+  // ─── Auto-sync employee → department ──────────────────────────────────────
+  function setupEmployeeDeptSync() {
+    document.getElementById('employeeSelect').addEventListener('change', function() {
+      const selected = this.options[this.selectedIndex];
+      const deptId = selected.getAttribute('data-dept');
+      if (deptId) {
+        document.getElementById('departmentSelect').value = deptId;
+      }
+    });
+  }
+
+  // ─── Load Notes ───────────────────────────────────────────────────────────
+  async function loadNotes() {
+    const { data, error } = await supabase
+      .from('notes')
+      .select('*, employees(name, title), departments(name)')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      showToast('Failed to load notes', 'error');
+      console.error(error);
+      return;
+    }
+
+    const notes = data || [];
+
+    // Update stats
+    document.getElementById('stat-total').textContent = notes.length;
+    const totalExp = notes.reduce((sum, n) => sum + parseFloat(n.expenditure || 0), 0);
+    document.getElementById('stat-expenditure').textContent = `EGP ${totalExp.toLocaleString('en-US', { minimumFractionDigits: 0 })}`;
+
+    // Build DataTable
+    if (notesTable) {
+      notesTable.clear().destroy();
+    }
+
+    const tableData = notes.map(n => [
+      `<div class="flex items-center gap-2">
+        <div class="w-7 h-7 rounded-full bg-ags-teal/15 flex items-center justify-center text-xs font-bold text-ags-teal">${(n.employees?.name || '?')[0]}</div>
+        <div>
+          <div class="text-slate-200 font-medium text-sm">${n.employees?.name || 'N/A'}</div>
+          <div class="text-slate-500 text-xs">${n.employees?.title || ''}</div>
+        </div>
+      </div>`,
+      `<span class="text-slate-200 font-medium">${escapeHtml(n.title)}</span>`,
+      `<span class="inline-flex px-2.5 py-1 rounded-md text-xs font-medium bg-ags-teal/10 text-ags-teal border border-ags-teal/20">${n.departments?.name || 'N/A'}</span>`,
+      `<div class="max-w-xs truncate text-slate-400 text-sm" title="${escapeHtml(n.note_content || '')}">${escapeHtml(n.note_content || '')}</div>`,
+      `<span class="badge-expenditure inline-flex px-3 py-1 rounded-lg text-xs font-semibold text-ags-teal">EGP ${parseFloat(n.expenditure || 0).toLocaleString()}</span>`,
+      `<div class="text-slate-500 text-xs">${formatDate(n.created_at)}</div>`,
+      `<div class="flex items-center gap-1">
+        <button onclick="viewNote('${n.id}')" class="p-1.5 rounded-lg hover:bg-ags-teal/10 text-slate-500 hover:text-ags-teal transition-all" title="View">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+        <button onclick="deleteNote('${n.id}')" class="p-1.5 rounded-lg hover:bg-red-500/10 text-slate-500 hover:text-red-400 transition-all" title="Delete">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+        </button>
+      </div>`
+    ]);
+
+    notesTable = $('#notesTable').DataTable({
+      data: tableData,
+      responsive: true,
+      pageLength: 10,
+      order: [[5, 'desc']],
+      language: {
+        search: '',
+        searchPlaceholder: 'Search notes...',
+        emptyTable: 'No notes recorded yet. Add your first note above.',
+        lengthMenu: 'Show _MENU_'
+      },
+      columnDefs: [
+        { targets: [3], className: 'none' },
+        { targets: [6], orderable: false, width: '80px' }
+      ]
+    });
+  }
+
+  // ─── Form Submit ──────────────────────────────────────────────────────────
+  function setupForm() {
+    document.getElementById('noteForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const employeeId = document.getElementById('employeeSelect').value;
+      const departmentId = document.getElementById('departmentSelect').value;
+      const title = document.getElementById('noteTitle').value.trim();
+      const content = document.getElementById('noteContent').value.trim();
+      const expenditure = parseFloat(document.getElementById('noteExpenditure').value) || 0;
+
+      if (!employeeId || !departmentId || !title || !content) {
+        showToast('Please fill all required fields', 'error');
+        return;
+      }
+
+      const { error } = await supabase.from('notes').insert({
+        employee_id: employeeId,
+        department_id: departmentId,
+        title: title,
+        note_content: content,
+        expenditure: expenditure
+      });
+
+      if (error) {
+        showToast('Failed to save note: ' + error.message, 'error');
+        return;
+      }
+
+      showToast('Note saved successfully!', 'success');
+      resetForm();
+      await loadNotes();
+    });
+  }
+
+  // ─── View Note (expand in modal-like alert) ───────────────────────────────
+  async function viewNote(id) {
+    const { data } = await supabase
+      .from('notes')
+      .select('*, employees(name, title), departments(name)')
+      .eq('id', id)
+      .single();
+
+    if (!data) return;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm';
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+    overlay.innerHTML = `
+      <div class="glass rounded-2xl p-6 max-w-lg w-full mx-4 animate-fade-in">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold text-white">${escapeHtml(data.title)}</h3>
+          <button onclick="this.closest('.fixed').remove()" class="p-1 rounded-lg hover:bg-white/5 text-slate-500">&times;</button>
+        </div>
+        <div class="space-y-3 text-sm">
+          <div class="flex gap-2"><span class="text-slate-500 w-24 shrink-0">Employee:</span><span class="text-slate-200">${data.employees?.name || 'N/A'} — ${data.employees?.title || ''}</span></div>
+          <div class="flex gap-2"><span class="text-slate-500 w-24 shrink-0">Department:</span><span class="text-ags-teal">${data.departments?.name || 'N/A'}</span></div>
+          <div class="flex gap-2"><span class="text-slate-500 w-24 shrink-0">Expenditure:</span><span class="text-amber-400 font-semibold">EGP ${parseFloat(data.expenditure || 0).toLocaleString()}</span></div>
+          <div class="flex gap-2"><span class="text-slate-500 w-24 shrink-0">Date:</span><span class="text-slate-300">${formatDate(data.created_at)}</span></div>
+          <div class="pt-2 border-t border-ags-border">
+            <span class="text-slate-500 text-xs uppercase tracking-wider">Note Content</span>
+            <p class="mt-2 text-slate-300 leading-relaxed">${escapeHtml(data.note_content || '')}</p>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+  }
+
+  // ─── Delete Note ──────────────────────────────────────────────────────────
+  function deleteNote(id) {
+    deleteTargetId = id;
+    const modal = document.getElementById('deleteModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.getElementById('confirmDeleteBtn').onclick = async () => {
+      const { error } = await supabase.from('notes').delete().eq('id', deleteTargetId);
+      if (error) { showToast('Delete failed', 'error'); }
+      else { showToast('Note deleted', 'success'); await loadNotes(); }
+      closeDeleteModal();
+    };
+  }
+
+  function closeDeleteModal() {
+    const modal = document.getElementById('deleteModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    deleteTargetId = null;
+  }
+
+  // ─── Helpers ──────────────────────────────────────────────────────────────
+  function resetForm() {
+    document.getElementById('noteForm').reset();
+  }
+
+  function refreshNotes() {
+    loadNotes();
+    showToast('Notes refreshed', 'info');
+  }
+
+  function formatDate(iso) {
+    if (!iso) return 'N/A';
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) +
+      ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // ─── Toast ────────────────────────────────────────────────────────────────
+  function showToast(message, type = 'info') {
+    const colors = {
+      success: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
+      error: 'border-red-500/30 bg-red-500/10 text-red-300',
+      info: 'border-ags-teal/30 bg-ags-teal/10 text-ags-teal'
+    };
+    const icons = { success: '✓', error: '✕', info: 'ℹ' };
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast glass rounded-xl px-5 py-3 border ${colors[type]} flex items-center gap-3 text-sm shadow-xl min-w-[280px]`;
+    toast.innerHTML = `<span class="font-bold text-lg">${icons[type]}</span><span>${message}</span>`;
+    container.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('show'));
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  }
+</script>
+
+</body>
+</html>
