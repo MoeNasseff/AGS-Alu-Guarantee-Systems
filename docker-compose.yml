@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  ags-noteapp:
+    image: nginx:alpine
+    container_name: ags-noteapp
+    ports:
+      - "8080:80"
+    volumes:
+      - ./noteApp.html:/usr/share/nginx/html/noteApp.html:ro
+      - ./reminderApp.html:/usr/share/nginx/html/reminderApp.html:ro
+      - ./assets:/usr/share/nginx/html/assets:ro
+      - ./config/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+    networks:
+      - ags-network
+
+networks:
+  ags-network:
+    driver: bridge

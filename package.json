@@ -1,0 +1,32 @@
+{
+  "name": "ags-noteapp",
+  "version": "1.0.0",
+  "description": "ALU-NOTEAPP & ALU-REMINDERAPP — Internal tools for AGS (Alu-Guarantee Systems)",
+  "private": true,
+  "scripts": {
+    "css:build": "npx tailwindcss -i src/css/input.css -o assets/css/styles.css --minify",
+    "css:watch": "npx tailwindcss -i src/css/input.css -o assets/css/styles.css --watch",
+    "dev": "npx tailwindcss -i src/css/input.css -o assets/css/styles.css --watch",
+    "build": "npx tailwindcss -i src/css/input.css -o assets/css/styles.css --minify",
+    "serve": "npx http-server . -p 8080 -c-1",
+    "start": "npm run build && npm run serve",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "ags",
+    "aluminum",
+    "notes",
+    "reminder",
+    "meeting"
+  ],
+  "author": "AGS - Alu-Guarantee Systems",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "autoprefixer": "^10.4.24",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.19"
+  },
+  "dependencies": {
+    "@fontsource/inter": "^5.2.8"
+  }
+}
