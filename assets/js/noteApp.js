@@ -9,7 +9,7 @@
 // ─── Supabase Config ─────────────────────────────────────────────────────────
 const SUPABASE_URL = 'https://iniqnmvdkgqbkfiduqdx.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImluaXFubXZka2dxYmtmaWR1cWR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA1ODIzMjUsImV4cCI6MjA4NjE1ODMyNX0.LqGQ6Qbx22_q1qxlzvjR4IyKHZRM54PEHQRRovpLVRE';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ─── State ───────────────────────────────────────────────────────────────────
 let departments = [];
@@ -29,8 +29,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ─── Load Dropdowns ─────────────────────────────────────────────────────────
 async function loadDropdowns() {
   const [deptRes, empRes] = await Promise.all([
-    supabase.from('departments').select('*').order('name'),
-    supabase.from('employees').select('*, departments(name)').order('name')
+    sb.from('departments').select('*').order('name'),
+    sb.from('employees').select('*, departments(name)').order('name')
   ]);
 
   departments = deptRes.data || [];
@@ -72,7 +72,7 @@ function setupEmployeeDeptSync() {
 
 // ─── Load Notes ─────────────────────────────────────────────────────────────
 async function loadNotes() {
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from('notes')
     .select('*, employees(name, title), departments(name)')
     .order('created_at', { ascending: false });
@@ -152,7 +152,7 @@ function setupForm() {
       return;
     }
 
-    const { error } = await supabase.from('notes').insert({
+    const { error } = await sb.from('notes').insert({
       employee_id: employeeId,
       department_id: departmentId,
       title: title,
@@ -173,7 +173,7 @@ function setupForm() {
 
 // ─── View Note (expand in modal) ────────────────────────────────────────────
 async function viewNote(id) {
-  const { data } = await supabase
+  const { data } = await sb
     .from('notes')
     .select('*, employees(name, title), departments(name)')
     .eq('id', id)
@@ -211,7 +211,7 @@ function deleteNote(id) {
   modal.classList.remove('hidden');
   modal.classList.add('flex');
   document.getElementById('confirmDeleteBtn').onclick = async () => {
-    const { error } = await supabase.from('notes').delete().eq('id', deleteTargetId);
+    const { error } = await sb.from('notes').delete().eq('id', deleteTargetId);
     if (error) { showToast('Delete failed', 'error'); }
     else { showToast('Note deleted', 'success'); await loadNotes(); }
     closeDeleteModal();

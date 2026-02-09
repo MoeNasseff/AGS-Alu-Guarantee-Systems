@@ -9,7 +9,7 @@
 // ─── Supabase Config ─────────────────────────────────────────────────────────
 const SUPABASE_URL = 'https://iniqnmvdkgqbkfiduqdx.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImluaXFubXZka2dxYmtmaWR1cWR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA1ODIzMjUsImV4cCI6MjA4NjE1ODMyNX0.LqGQ6Qbx22_q1qxlzvjR4IyKHZRM54PEHQRRovpLVRE';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ─── State ───────────────────────────────────────────────────────────────────
 let meetings = [];
@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupForm();
 
   // Subscribe to real-time meeting inserts (from bot)
-  supabase
+  sb
     .channel('meetings-realtime')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'meetings' }, (payload) => {
       showToast(`New meeting via ${payload.new.source}: ${payload.new.title}`, 'info');
@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // ─── Load Employees ─────────────────────────────────────────────────────────
 async function loadEmployees() {
-  const { data, error } = await supabase.from('employees').select('*').order('name');
+  const { data, error } = await sb.from('employees').select('*').order('name');
   if (error) {
     console.error('Failed to load employees:', error);
     showToast('Failed to load employees', 'error');
@@ -55,7 +55,7 @@ async function loadEmployees() {
 
 // ─── Load Meetings ──────────────────────────────────────────────────────────
 async function loadMeetings() {
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from('meetings')
     .select('*, employees(name, title)')
     .order('meeting_date', { ascending: true });
@@ -186,7 +186,7 @@ function setupForm() {
       return;
     }
 
-    const { error } = await supabase.from('meetings').insert({
+    const { error } = await sb.from('meetings').insert({
       title,
       meeting_date: new Date(meetDate).toISOString(),
       contact_person: contact,
@@ -239,7 +239,7 @@ function closeStatusModal() {
 
 async function updateMeetingStatus(status) {
   if (!statusTargetId) return;
-  const { error } = await supabase.from('meetings').update({ status }).eq('id', statusTargetId);
+  const { error } = await sb.from('meetings').update({ status }).eq('id', statusTargetId);
   if (error) { showToast('Update failed', 'error'); }
   else { showToast(`Status updated to ${status}`, 'success'); await loadMeetings(); }
   closeStatusModal();
