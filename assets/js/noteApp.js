@@ -54,6 +54,12 @@ async function loadDropdowns() {
     userSelect.innerHTML += `<option value="${e.id}">${e.name}</option>`;
   });
 
+  // Populate created by dropdown
+  const createdBySelect = document.getElementById('noteCreatedBy');
+  employees.forEach(e => {
+    createdBySelect.innerHTML += `<option value="${e.id}">${e.name} — ${e.title}</option>`;
+  });
+
   // Update stats
   document.getElementById('stat-depts').textContent = departments.length;
   document.getElementById('stat-employees').textContent = employees.length;
@@ -152,12 +158,15 @@ function setupForm() {
       return;
     }
 
+    const createdBy = document.getElementById('noteCreatedBy').value || null;
+
     const { error } = await sb.from('notes').insert({
       employee_id: employeeId,
       department_id: departmentId,
       title: title,
       note_content: content,
-      expenditure: expenditure
+      expenditure: expenditure,
+      created_by: createdBy
     });
 
     if (error) {
