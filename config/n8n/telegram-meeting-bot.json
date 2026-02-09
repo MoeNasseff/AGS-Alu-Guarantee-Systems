@@ -1,0 +1,340 @@
+{
+  "name": "AGS Telegram Meeting Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message"],
+        "additionalFields": {}
+      },
+      "id": "telegram-trigger",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-cred",
+          "name": "Telegram API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "/meeting",
+              "operator": {
+                "type": "string",
+                "operation": "startsWith"
+              }
+            }
+          ]
+        }
+      },
+      "id": "is-meeting-cmd",
+      "name": "Is Meeting Command?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "/status",
+              "operator": {
+                "type": "string",
+                "operation": "startsWith"
+              }
+            }
+          ]
+        }
+      },
+      "id": "is-status-cmd",
+      "name": "Is Status Command?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [460, 520]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "/help",
+              "operator": {
+                "type": "string",
+                "operation": "startsWith"
+              }
+            }
+          ]
+        }
+      },
+      "id": "is-help-cmd",
+      "name": "Is Help Command?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [460, 740]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse meeting details from Telegram message\n// Expected format:\n// /meeting\n// Title: Client Review\n// Date: 2026-02-15 14:00\n// Contact: Ahmed Hassan\n// Email: ahmed@example.com\n// Phone: +201234567890\n// Location: Cairo Office\n// Map: https://maps.google.com/...\n// Info: Quarterly review meeting\n\nconst text = $input.first().json.message.text;\nconst chatId = $input.first().json.message.chat.id;\nconst lines = text.split('\\n').slice(1); // Skip /meeting line\n\nconst data = {};\nfor (const line of lines) {\n  const colonIdx = line.indexOf(':');\n  if (colonIdx === -1) continue;\n  const key = line.substring(0, colonIdx).trim().toLowerCase();\n  const value = line.substring(colonIdx + 1).trim();\n  data[key] = value;\n}\n\nif (!data.title || !data.date || !data.contact) {\n  return [{\n    json: {\n      chatId,\n      error: true,\n      message: '❌ Missing required fields. Please use this format:\\n\\n/meeting\\nTitle: Meeting Name\\nDate: YYYY-MM-DD HH:MM\\nContact: Person Name\\nEmail: email@example.com\\nPhone: +201234567890\\nLocation: Place Name\\nMap: https://maps.google.com/...\\nInfo: Meeting details\\n\\n*Required: Title, Date, Contact'\n    }\n  }];\n}\n\n// Parse and validate date\nlet meetingDate;\ntry {\n  meetingDate = new Date(data.date).toISOString();\n} catch (e) {\n  return [{\n    json: {\n      chatId,\n      error: true,\n      message: '❌ Invalid date format. Use: YYYY-MM-DD HH:MM'\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    chatId,\n    error: false,\n    meeting: {\n      title: data.title,\n      meeting_date: meetingDate,\n      contact_person: data.contact,\n      contact_email: data.email || null,\n      contact_phone: data.phone || null,\n      location_name: data.location || null,\n      location_url: data.map || null,\n      meeting_info: data.info || '',\n      source: 'telegram',\n      status: 'pending',\n      reminder_sent: false,\n      reminder_count: 0\n    }\n  }\n}];"
+      },
+      "id": "parse-meeting",
+      "name": "Parse Meeting Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "conditions": [
+            {
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      },
+      "id": "has-error",
+      "name": "Has Parse Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [920, 200]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-error-msg",
+      "name": "Send Error Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1140, 140],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-cred",
+          "name": "Telegram API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://iniqnmvdkgqbkfiduqdx.supabase.co/rest/v1/meetings",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.meeting) }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_ANON_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        }
+      },
+      "id": "insert-supabase",
+      "name": "Insert to Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1140, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse Meeting Data').item.json.chatId }}",
+        "text": "=✅ *Meeting Scheduled!*\n\n📋 *{{ $('Parse Meeting Data').item.json.meeting.title }}*\n📅 {{ $('Parse Meeting Data').item.json.meeting.meeting_date }}\n👤 {{ $('Parse Meeting Data').item.json.meeting.contact_person }}\n📍 {{ $('Parse Meeting Data').item.json.meeting.location_name || 'Not set' }}\n\n_You'll receive reminders 1 hour before the meeting via Telegram, WhatsApp, and Email._",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-confirmation",
+      "name": "Send Confirmation",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1380, 300],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-cred",
+          "name": "Telegram API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://iniqnmvdkgqbkfiduqdx.supabase.co/rest/v1/meetings?status=eq.pending&order=meeting_date.asc&limit=5",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_ANON_KEY }}"
+            }
+          ]
+        }
+      },
+      "id": "fetch-pending",
+      "name": "Fetch Pending Meetings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [700, 520]
+    },
+    {
+      "parameters": {
+        "jsCode": "const chatId = $('Telegram Trigger').first().json.message.chat.id;\nconst meetings = $input.all().map(i => i.json);\n\nif (!meetings || meetings.length === 0) {\n  return [{ json: { chatId, text: '📋 *No pending meetings*\\n\\nUse /meeting to schedule one.' } }];\n}\n\nlet msg = '📋 *Upcoming Meetings*\\n\\n';\nmeetings.forEach((m, i) => {\n  const date = new Date(m.meeting_date);\n  const dateStr = date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });\n  const timeStr = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });\n  msg += `${i+1}. *${m.title}*\\n   📅 ${dateStr} at ${timeStr}\\n   👤 ${m.contact_person}\\n   📍 ${m.location_name || 'N/A'}\\n\\n`;\n});\n\nreturn [{ json: { chatId, text: msg } }];"
+      },
+      "id": "format-status",
+      "name": "Format Status Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 520]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-status",
+      "name": "Send Status",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1140, 520],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-cred",
+          "name": "Telegram API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "🤖 *AGS Meeting Reminder Bot*\n\nAvailable commands:\n\n/meeting — Schedule a new meeting\n/status — View upcoming meetings\n/help — Show this help message\n\n*Meeting format:*\n```\n/meeting\nTitle: Meeting Name\nDate: YYYY-MM-DD HH:MM\nContact: Person Name\nEmail: email@example.com\nPhone: +201234567890\nLocation: Place Name\nMap: https://maps.google.com/...\nInfo: Meeting details\n```\n\n_Required fields: Title, Date, Contact_",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-help",
+      "name": "Send Help",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [700, 740],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-cred",
+          "name": "Telegram API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          { "node": "Is Meeting Command?", "type": "main", "index": 0 },
+          { "node": "Is Status Command?", "type": "main", "index": 0 },
+          { "node": "Is Help Command?", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Is Meeting Command?": {
+      "main": [
+        [{ "node": "Parse Meeting Data", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Is Status Command?": {
+      "main": [
+        [{ "node": "Fetch Pending Meetings", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Is Help Command?": {
+      "main": [
+        [{ "node": "Send Help", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Parse Meeting Data": {
+      "main": [
+        [{ "node": "Has Parse Error?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Has Parse Error?": {
+      "main": [
+        [{ "node": "Send Error Message", "type": "main", "index": 0 }],
+        [{ "node": "Insert to Supabase", "type": "main", "index": 0 }]
+      ]
+    },
+    "Insert to Supabase": {
+      "main": [
+        [{ "node": "Send Confirmation", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fetch Pending Meetings": {
+      "main": [
+        [{ "node": "Format Status Message", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Status Message": {
+      "main": [
+        [{ "node": "Send Status", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "AGS" },
+    { "name": "Telegram" }
+  ]
+}

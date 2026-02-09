@@ -1,0 +1,173 @@
+{
+  "name": "AGS Meeting Reminder Cron",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "minutes", "minutesInterval": 15 }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Every 15 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://iniqnmvdkgqbkfiduqdx.supabase.co/rest/v1/meetings?status=eq.pending&reminder_sent=eq.false&select=*,employees(name,title)&order=meeting_date.asc",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_ANON_KEY }}" }
+          ]
+        }
+      },
+      "id": "fetch-meetings",
+      "name": "Fetch Pending Meetings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filter meetings that are within the next 60 minutes\nconst now = new Date();\nconst oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);\nconst meetings = $input.all().map(i => i.json);\n\n// If the response is an array (Supabase returns array)\nconst items = Array.isArray(meetings[0]) ? meetings[0] : meetings;\n\nconst upcoming = items.filter(m => {\n  if (!m.meeting_date) return false;\n  const meetDate = new Date(m.meeting_date);\n  return meetDate > now && meetDate <= oneHourFromNow;\n});\n\nif (upcoming.length === 0) {\n  return []; // No meetings to remind about\n}\n\nreturn upcoming.map(m => {\n  const date = new Date(m.meeting_date);\n  const dateStr = date.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });\n  const timeStr = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });\n  const minsLeft = Math.round((date - now) / 60000);\n  \n  return {\n    json: {\n      id: m.id,\n      title: m.title,\n      meeting_date: m.meeting_date,\n      dateStr,\n      timeStr,\n      minsLeft,\n      contact_person: m.contact_person,\n      contact_email: m.contact_email,\n      contact_phone: m.contact_phone,\n      location_name: m.location_name,\n      location_url: m.location_url,\n      meeting_info: m.meeting_info,\n      source: m.source,\n      reminder_count: (m.reminder_count || 0) + 1,\n      created_by_name: m.employees?.name || 'Unknown'\n    }\n  };\n});"
+      },
+      "id": "filter-upcoming",
+      "name": "Filter Upcoming (≤1hr)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_REMINDER_CHAT_ID }}",
+        "text": "=⏰ *MEETING REMINDER*\n\n📋 *{{ $json.title }}*\n📅 {{ $json.dateStr }} at {{ $json.timeStr }}\n⏱️ *{{ $json.minsLeft }} minutes from now*\n\n👤 Contact: {{ $json.contact_person }}\n{{ $json.contact_phone ? '📞 ' + $json.contact_phone : '' }}\n{{ $json.location_name ? '📍 ' + $json.location_name : '' }}\n{{ $json.location_url ? '🗺️ ' + $json.location_url : '' }}\n\n{{ $json.meeting_info ? '📝 ' + $json.meeting_info : '' }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "telegram-reminder",
+      "name": "Send Telegram Reminder",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [920, 180],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-cred",
+          "name": "Telegram API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $json.contact_phone, type: 'text', text: { body: '⏰ MEETING REMINDER\\n\\n📋 ' + $json.title + '\\n📅 ' + $json.dateStr + ' at ' + $json.timeStr + '\\n⏱️ ' + $json.minsLeft + ' minutes from now\\n\\n👤 Contact: ' + $json.contact_person + ($json.location_name ? '\\n📍 ' + $json.location_name : '') + ($json.meeting_info ? '\\n📝 ' + $json.meeting_info : '') } }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.WHATSAPP_ACCESS_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        }
+      },
+      "id": "whatsapp-reminder",
+      "name": "Send WhatsApp Reminder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [920, 340]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.SMTP_FROM }}",
+        "toEmail": "={{ $json.contact_email }}",
+        "subject": "=⏰ Meeting Reminder: {{ $json.title }} — {{ $json.dateStr }} at {{ $json.timeStr }}",
+        "emailType": "html",
+        "html": "=<div style=\"font-family:Inter,Arial,sans-serif;max-width:600px;margin:0 auto;background:#0a1220;color:#cbd5e1;padding:32px;border-radius:16px\">\n  <div style=\"text-align:center;margin-bottom:24px\">\n    <h1 style=\"color:#3ba8bf;font-size:20px;margin:0\">⏰ Meeting Reminder</h1>\n    <p style=\"color:#64748b;font-size:14px;margin-top:4px\">{{ $json.minsLeft }} minutes from now</p>\n  </div>\n  <div style=\"background:#111d2e;border-radius:12px;padding:24px;border:1px solid #1e3048\">\n    <h2 style=\"color:#fff;font-size:18px;margin:0 0 16px\">{{ $json.title }}</h2>\n    <table style=\"width:100%;font-size:14px;color:#94a3b8\">\n      <tr><td style=\"padding:6px 0;color:#64748b\">📅 Date</td><td style=\"padding:6px 0\">{{ $json.dateStr }} at {{ $json.timeStr }}</td></tr>\n      <tr><td style=\"padding:6px 0;color:#64748b\">👤 Contact</td><td style=\"padding:6px 0\">{{ $json.contact_person }}</td></tr>\n      {{ $json.contact_phone ? '<tr><td style=\"padding:6px 0;color:#64748b\">📞 Phone</td><td style=\"padding:6px 0\">' + $json.contact_phone + '</td></tr>' : '' }}\n      {{ $json.location_name ? '<tr><td style=\"padding:6px 0;color:#64748b\">📍 Location</td><td style=\"padding:6px 0\">' + ($json.location_url ? '<a href=\"' + $json.location_url + '\" style=\"color:#3ba8bf\">' + $json.location_name + '</a>' : $json.location_name) + '</td></tr>' : '' }}\n    </table>\n    {{ $json.meeting_info ? '<div style=\"margin-top:16px;padding-top:16px;border-top:1px solid #1e3048\"><p style=\"color:#64748b;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 8px\">Notes</p><p style=\"color:#cbd5e1;margin:0;font-size:14px;line-height:1.6\">' + $json.meeting_info + '</p></div>' : '' }}\n  </div>\n  <p style=\"text-align:center;color:#475569;font-size:12px;margin-top:24px\">AGS - Alu-Guarantee Systems</p>\n</div>",
+        "options": {}
+      },
+      "id": "email-reminder",
+      "name": "Send Email Reminder",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [920, 500],
+      "credentials": {
+        "smtp": {
+          "id": "smtp-cred",
+          "name": "SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://iniqnmvdkgqbkfiduqdx.supabase.co/rest/v1/meetings?id=eq.{{ $json.id }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ reminder_sent: true, reminder_count: $json.reminder_count }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_ANON_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        }
+      },
+      "id": "update-reminder-flag",
+      "name": "Mark Reminder Sent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1160, 340]
+    }
+  ],
+  "connections": {
+    "Every 15 Minutes": {
+      "main": [
+        [{ "node": "Fetch Pending Meetings", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fetch Pending Meetings": {
+      "main": [
+        [{ "node": "Filter Upcoming (≤1hr)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Filter Upcoming (≤1hr)": {
+      "main": [
+        [
+          { "node": "Send Telegram Reminder", "type": "main", "index": 0 },
+          { "node": "Send WhatsApp Reminder", "type": "main", "index": 0 },
+          { "node": "Send Email Reminder", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Send Telegram Reminder": {
+      "main": [
+        [{ "node": "Mark Reminder Sent", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send WhatsApp Reminder": {
+      "main": [
+        [{ "node": "Mark Reminder Sent", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send Email Reminder": {
+      "main": [
+        [{ "node": "Mark Reminder Sent", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "AGS" },
+    { "name": "Reminder" },
+    { "name": "Cron" }
+  ]
+}

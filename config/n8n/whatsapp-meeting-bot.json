@@ -1,0 +1,299 @@
+{
+  "name": "AGS WhatsApp Meeting Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "whatsapp-webhook",
+      "name": "WhatsApp Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "whatsapp-webhook-id"
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "whatsapp",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "whatsapp-verify",
+      "name": "WhatsApp Verify Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 100],
+      "webhookId": "whatsapp-verify-id"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Handle Meta webhook verification (GET request)\nconst query = $input.first().json.query;\nconst verifyToken = $env.WHATSAPP_VERIFY_TOKEN || 'ags-whatsapp-verify-token';\n\nif (query['hub.verify_token'] === verifyToken) {\n  return [{ json: { response: parseInt(query['hub.challenge']) } }];\n}\n\nreturn [{ json: { response: 'Forbidden', statusCode: 403 } }];"
+      },
+      "id": "handle-verify",
+      "name": "Handle Verification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 100]
+    },
+    {
+      "parameters": {
+        "respondWith": "={{ $json.response }}",
+        "options": {}
+      },
+      "id": "verify-response",
+      "name": "Verify Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [680, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract message from WhatsApp webhook payload\nconst body = $input.first().json.body;\n\ntry {\n  const entry = body.entry?.[0];\n  const changes = entry?.changes?.[0];\n  const value = changes?.value;\n  const message = value?.messages?.[0];\n  \n  if (!message || message.type !== 'text') {\n    return [{ json: { skip: true } }];\n  }\n  \n  const from = message.from; // sender phone number\n  const text = message.text.body;\n  const contactName = value.contacts?.[0]?.profile?.name || 'Unknown';\n  \n  return [{\n    json: {\n      skip: false,\n      from,\n      contactName,\n      text,\n      phoneNumberId: value.metadata.phone_number_id\n    }\n  }];\n} catch (e) {\n  return [{ json: { skip: true } }];\n}"
+      },
+      "id": "extract-wa-msg",
+      "name": "Extract WA Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "EVENT_RECEIVED",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "ack-webhook",
+      "name": "Acknowledge Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [460, 480]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "conditions": [
+            {
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      },
+      "id": "should-process",
+      "name": "Should Process?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.text.toLowerCase() }}",
+              "rightValue": "meeting",
+              "operator": {
+                "type": "string",
+                "operation": "startsWith"
+              }
+            }
+          ]
+        }
+      },
+      "id": "is-wa-meeting",
+      "name": "Is Meeting?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse meeting from WhatsApp message\n// Expected format:\n// meeting\n// Title: Client Review\n// Date: 2026-02-15 14:00\n// Contact: Ahmed Hassan\n// Email: ahmed@example.com\n// Phone: +201234567890\n// Location: Cairo Office\n// Map: https://maps.google.com/...\n// Info: Quarterly review meeting\n\nconst input = $input.first().json;\nconst text = input.text;\nconst from = input.from;\nconst lines = text.split('\\n').slice(1);\n\nconst data = {};\nfor (const line of lines) {\n  const colonIdx = line.indexOf(':');\n  if (colonIdx === -1) continue;\n  const key = line.substring(0, colonIdx).trim().toLowerCase();\n  const value = line.substring(colonIdx + 1).trim();\n  data[key] = value;\n}\n\nif (!data.title || !data.date || !data.contact) {\n  return [{\n    json: {\n      from,\n      error: true,\n      replyText: '❌ Missing required fields. Please use this format:\\n\\nmeeting\\nTitle: Meeting Name\\nDate: YYYY-MM-DD HH:MM\\nContact: Person Name\\nEmail: email@example.com\\nPhone: +201234567890\\nLocation: Place Name\\nMap: https://maps.google.com/...\\nInfo: Meeting details\\n\\n*Required: Title, Date, Contact*'\n    }\n  }];\n}\n\nlet meetingDate;\ntry {\n  meetingDate = new Date(data.date).toISOString();\n} catch (e) {\n  return [{\n    json: {\n      from,\n      error: true,\n      replyText: '❌ Invalid date format. Use: YYYY-MM-DD HH:MM'\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    from,\n    error: false,\n    meeting: {\n      title: data.title,\n      meeting_date: meetingDate,\n      contact_person: data.contact,\n      contact_email: data.email || null,\n      contact_phone: data.phone || from,\n      location_name: data.location || null,\n      location_url: data.map || null,\n      meeting_info: data.info || '',\n      source: 'whatsapp',\n      status: 'pending',\n      reminder_sent: false,\n      reminder_count: 0\n    },\n    replyText: `✅ *Meeting Scheduled!*\\n\\n📋 *${data.title}*\\n📅 ${data.date}\\n👤 ${data.contact}\\n📍 ${data.location || 'Not set'}\\n\\n_Reminders will be sent 1 hour before._`\n  }\n}];"
+      },
+      "id": "parse-wa-meeting",
+      "name": "Parse WA Meeting",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "conditions": [
+            {
+              "leftValue": "={{ $json.error }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      },
+      "id": "wa-no-error",
+      "name": "No Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1340, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://iniqnmvdkgqbkfiduqdx.supabase.co/rest/v1/meetings",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.meeting) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_ANON_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "return=representation" }
+          ]
+        }
+      },
+      "id": "wa-insert-supabase",
+      "name": "Insert Meeting",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 140]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $('Parse WA Meeting').item.json.from, type: 'text', text: { body: $('Parse WA Meeting').item.json.replyText } }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.WHATSAPP_ACCESS_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        }
+      },
+      "id": "wa-send-reply",
+      "name": "Send WA Reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1780, 140]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $json.from, type: 'text', text: { body: $json.replyText } }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.WHATSAPP_ACCESS_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        }
+      },
+      "id": "wa-send-error",
+      "name": "Send WA Error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 320]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $json.from, type: 'text', text: { body: '🤖 *AGS Meeting Bot*\\n\\nTo schedule a meeting, send:\\n\\nmeeting\\nTitle: Meeting Name\\nDate: YYYY-MM-DD HH:MM\\nContact: Person Name\\nEmail: email@example.com\\nPhone: +201234567890\\nLocation: Place Name\\nMap: https://maps.google.com/...\\nInfo: Meeting details\\n\\n_Required: Title, Date, Contact_' } }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.WHATSAPP_ACCESS_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        }
+      },
+      "id": "wa-send-help",
+      "name": "Send WA Help",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 440]
+    }
+  ],
+  "connections": {
+    "WhatsApp Webhook": {
+      "main": [
+        [
+          { "node": "Extract WA Message", "type": "main", "index": 0 },
+          { "node": "Acknowledge Webhook", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "WhatsApp Verify Webhook": {
+      "main": [
+        [{ "node": "Handle Verification", "type": "main", "index": 0 }]
+      ]
+    },
+    "Handle Verification": {
+      "main": [
+        [{ "node": "Verify Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract WA Message": {
+      "main": [
+        [{ "node": "Should Process?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Should Process?": {
+      "main": [
+        [{ "node": "Is Meeting?", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Is Meeting?": {
+      "main": [
+        [{ "node": "Parse WA Meeting", "type": "main", "index": 0 }],
+        [{ "node": "Send WA Help", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse WA Meeting": {
+      "main": [
+        [{ "node": "No Error?", "type": "main", "index": 0 }]
+      ]
+    },
+    "No Error?": {
+      "main": [
+        [{ "node": "Insert Meeting", "type": "main", "index": 0 }],
+        [{ "node": "Send WA Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Insert Meeting": {
+      "main": [
+        [{ "node": "Send WA Reply", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "AGS" },
+    { "name": "WhatsApp" }
+  ]
+}
