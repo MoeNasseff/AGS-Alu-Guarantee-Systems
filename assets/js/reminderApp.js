@@ -265,6 +265,241 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+// ─── Map Picker (Leaflet + OpenStreetMap + Nominatim) ──────────────────────
+let mapInstance = null;
+let mapMarker = null;
+let mapSelectedLat = null;
+let mapSelectedLng = null;
+let mapSelectedName = '';
+let mapSearchTimeout = null;
+
+/**
+ * Opens the map picker modal and initializes the Leaflet map.
+ * Default center: Cairo, Egypt (30.05, 31.25).
+ */
+function openMapPicker() {
+  const modal = document.getElementById('mapModal');
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+
+  // Initialize map only once
+  if (!mapInstance) {
+    mapInstance = L.map('mapContainer', { zoomControl: true }).setView([30.05, 31.25], 10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 19
+    }).addTo(mapInstance);
+
+    // Click on map to place marker
+    mapInstance.on('click', (e) => {
+      placeMapMarker(e.latlng.lat, e.latlng.lng);
+      reverseGeocode(e.latlng.lat, e.latlng.lng);
+    });
+
+    // Search input with debounce
+    document.getElementById('mapSearchInput').addEventListener('input', (e) => {
+      clearTimeout(mapSearchTimeout);
+      const query = e.target.value.trim();
+      if (query.length < 3) {
+        document.getElementById('mapSearchResults').classList.add('hidden');
+        return;
+      }
+      mapSearchTimeout = setTimeout(() => searchLocation(query), 400);
+    });
+
+    // Enter key triggers search immediately
+    document.getElementById('mapSearchInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        clearTimeout(mapSearchTimeout);
+        const query = e.target.value.trim();
+        if (query.length >= 2) searchLocation(query);
+      }
+    });
+  }
+
+  // Force map to recalculate size after modal opens
+  setTimeout(() => mapInstance.invalidateSize(), 150);
+
+  // If location already has coords, show them
+  const existingUrl = document.getElementById('meetMapUrl').value;
+  if (existingUrl) {
+    const coords = extractCoordsFromUrl(existingUrl);
+    if (coords) {
+      placeMapMarker(coords.lat, coords.lng);
+      mapInstance.setView([coords.lat, coords.lng], 15);
+    }
+  }
+}
+
+/** Closes the map picker modal and resets search state. */
+function closeMapPicker() {
+  const modal = document.getElementById('mapModal');
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+  document.getElementById('mapSearchResults').classList.add('hidden');
+  document.getElementById('mapSearchInput').value = '';
+}
+
+/**
+ * Places a marker on the map at the given coordinates.
+ * @param {number} lat - Latitude
+ * @param {number} lng - Longitude
+ */
+function placeMapMarker(lat, lng) {
+  mapSelectedLat = lat;
+  mapSelectedLng = lng;
+
+  if (mapMarker) {
+    mapMarker.setLatLng([lat, lng]);
+  } else {
+    mapMarker = L.marker([lat, lng]).addTo(mapInstance);
+  }
+
+  document.getElementById('mapConfirmBtn').disabled = false;
+}
+
+/**
+ * Searches for a location using Nominatim (OpenStreetMap geocoding).
+ * @param {string} query - Search query string
+ */
+async function searchLocation(query) {
+  const spinner = document.getElementById('mapSearchSpinner');
+  const resultsEl = document.getElementById('mapSearchResults');
+  spinner.classList.remove('hidden');
+
+  try {
+    const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`);
+    const data = await resp.json();
+    spinner.classList.add('hidden');
+
+    if (!data.length) {
+      resultsEl.innerHTML = '<div class="px-3 py-2 text-xs text-slate-500">No results found. Try a different search.</div>';
+      resultsEl.classList.remove('hidden');
+      return;
+    }
+
+    resultsEl.innerHTML = data.map((place, i) => `
+      <button type="button" onclick="selectSearchResult(${i})" class="map-search-result w-full text-left px-3 py-2.5 rounded-lg text-sm hover:bg-ags-teal/10 transition-all flex items-start gap-2"
+        data-lat="${place.lat}" data-lng="${place.lon}" data-name="${escapeHtml(place.display_name)}">
+        <svg class="w-4 h-4 text-ags-teal shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        <span class="text-slate-300 text-xs leading-relaxed">${escapeHtml(place.display_name)}</span>
+      </button>
+    `).join('');
+    resultsEl.classList.remove('hidden');
+
+    // Store results for click handler
+    window._mapSearchData = data;
+  } catch (err) {
+    spinner.classList.add('hidden');
+    resultsEl.innerHTML = '<div class="px-3 py-2 text-xs text-red-400">Search failed. Check your connection.</div>';
+    resultsEl.classList.remove('hidden');
+    console.error('Nominatim search error:', err);
+  }
+}
+
+/**
+ * Handles clicking a search result: fly to it and place a marker.
+ * @param {number} index - Index in the search results array
+ */
+function selectSearchResult(index) {
+  const place = window._mapSearchData[index];
+  if (!place) return;
+
+  const lat = parseFloat(place.lat);
+  const lng = parseFloat(place.lon);
+
+  placeMapMarker(lat, lng);
+  mapInstance.flyTo([lat, lng], 16, { duration: 1 });
+
+  // Build a short display name from the address
+  mapSelectedName = buildShortName(place);
+  document.getElementById('mapSelectedInfo').innerHTML =
+    `<span class="text-ags-teal font-medium">${escapeHtml(mapSelectedName)}</span> <span class="text-slate-600 text-xs">(${lat.toFixed(5)}, ${lng.toFixed(5)})</span>`;
+
+  document.getElementById('mapSearchResults').classList.add('hidden');
+  document.getElementById('mapSearchInput').value = mapSelectedName;
+}
+
+/**
+ * Reverse geocodes coordinates to get a place name.
+ * @param {number} lat - Latitude
+ * @param {number} lng - Longitude
+ */
+async function reverseGeocode(lat, lng) {
+  document.getElementById('mapSelectedInfo').innerHTML =
+    `<span class="text-slate-500">Looking up address...</span>`;
+
+  try {
+    const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`);
+    const data = await resp.json();
+
+    mapSelectedName = buildShortName(data);
+    document.getElementById('mapSelectedInfo').innerHTML =
+      `<span class="text-ags-teal font-medium">${escapeHtml(mapSelectedName)}</span> <span class="text-slate-600 text-xs">(${lat.toFixed(5)}, ${lng.toFixed(5)})</span>`;
+  } catch (err) {
+    mapSelectedName = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    document.getElementById('mapSelectedInfo').innerHTML =
+      `<span class="text-slate-400">${mapSelectedName}</span>`;
+    console.error('Reverse geocode error:', err);
+  }
+}
+
+/**
+ * Builds a concise location name from Nominatim address data.
+ * @param {Object} place - Nominatim result object
+ * @returns {string} Short display name
+ */
+function buildShortName(place) {
+  if (!place || !place.address) return place?.display_name || 'Unknown';
+  const a = place.address;
+  const parts = [
+    a.building || a.amenity || a.shop || a.tourism || a.office || '',
+    a.road || a.street || '',
+    a.suburb || a.neighbourhood || a.district || '',
+    a.city || a.town || a.village || a.county || '',
+    a.state || '',
+    a.country || ''
+  ].filter(Boolean);
+  // Remove duplicates while preserving order
+  return [...new Set(parts)].slice(0, 4).join(', ');
+}
+
+/** Confirms the selected map location and fills the form fields. */
+function confirmMapSelection() {
+  if (mapSelectedLat === null || mapSelectedLng === null) return;
+
+  // Fill location name
+  const locationInput = document.getElementById('meetLocation');
+  locationInput.value = mapSelectedName || `${mapSelectedLat.toFixed(5)}, ${mapSelectedLng.toFixed(5)}`;
+
+  // Generate and fill Google Maps URL
+  const gmapsUrl = `https://www.google.com/maps?q=${mapSelectedLat},${mapSelectedLng}`;
+  const mapUrlInput = document.getElementById('meetMapUrl');
+  mapUrlInput.value = gmapsUrl;
+
+  // Show the external link button
+  const linkBtn = document.getElementById('meetMapUrlLink');
+  linkBtn.href = gmapsUrl;
+  linkBtn.classList.remove('hidden');
+
+  closeMapPicker();
+  showToast('Location selected', 'success');
+}
+
+/**
+ * Extracts lat/lng from a Google Maps URL.
+ * @param {string} url - Google Maps URL
+ * @returns {{lat: number, lng: number}|null}
+ */
+function extractCoordsFromUrl(url) {
+  // Match ?q=lat,lng or @lat,lng
+  const match = url.match(/[?&@]q?=?(-?\d+\.?\d*),(-?\d+\.?\d*)/) ||
+                url.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+  if (match) return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
+  return null;
+}
+
 // ─── Toast Notifications ────────────────────────────────────────────────────
 function showToast(message, type = 'info') {
   const colors = {

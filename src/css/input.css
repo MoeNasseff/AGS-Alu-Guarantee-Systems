@@ -277,3 +277,37 @@ table.dataTable tbody tr.selected td { background: #1a3550 !important; }
   color: #3ba8bf;
   background: rgba(59, 168, 191, 0.1);
 }
+
+/* ─── Map Picker ────────────────────────────────────────────────────────── */
+#mapContainer {
+  z-index: 0;
+}
+
+#mapContainer .leaflet-control-zoom a {
+  background: #111d2e;
+  color: #3ba8bf;
+  border-color: #1e3048;
+}
+
+#mapContainer .leaflet-control-zoom a:hover {
+  background: #162a40;
+}
+
+#mapContainer .leaflet-control-attribution {
+  background: rgba(10, 18, 32, 0.85);
+  color: #475569;
+  font-size: 0.6rem;
+}
+
+#mapContainer .leaflet-control-attribution a {
+  color: #3ba8bf;
+}
+
+#mapSearchResults {
+  scrollbar-width: thin;
+  scrollbar-color: #3ba8bf44 transparent;
+}
+
+.map-search-result:hover {
+  background: rgba(59, 168, 191, 0.08);
+}
