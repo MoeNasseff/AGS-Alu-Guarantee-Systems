@@ -80,7 +80,7 @@ function setupEmployeeDeptSync() {
 async function loadNotes() {
   const { data, error } = await sb
     .from('notes')
-    .select('*, employees(name, title), departments(name)')
+    .select('*, employee:employees!employee_id(name, title), creator:employees!created_by(name), departments(name)')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -103,10 +103,10 @@ async function loadNotes() {
 
   const tableData = notes.map(n => [
     `<div class="flex items-center gap-2">
-      <div class="w-7 h-7 rounded-full bg-ags-teal/15 flex items-center justify-center text-xs font-bold text-ags-teal">${(n.employees?.name || '?')[0]}</div>
+      <div class="w-7 h-7 rounded-full bg-ags-teal/15 flex items-center justify-center text-xs font-bold text-ags-teal">${(n.employee?.name || '?')[0]}</div>
       <div>
-        <div class="text-slate-200 font-medium text-sm">${n.employees?.name || 'N/A'}</div>
-        <div class="text-slate-500 text-xs">${n.employees?.title || ''}</div>
+        <div class="text-slate-200 font-medium text-sm">${n.employee?.name || 'N/A'}</div>
+        <div class="text-slate-500 text-xs">${n.employee?.title || ''}</div>
       </div>
     </div>`,
     `<span class="text-slate-200 font-medium">${escapeHtml(n.title)}</span>`,
@@ -184,7 +184,7 @@ function setupForm() {
 async function viewNote(id) {
   const { data } = await sb
     .from('notes')
-    .select('*, employees(name, title), departments(name)')
+    .select('*, employee:employees!employee_id(name, title), creator:employees!created_by(name), departments(name)')
     .eq('id', id)
     .single();
 
@@ -205,7 +205,7 @@ async function viewNote(id) {
         <button onclick="this.closest('.fixed').remove()" class="p-1 rounded-lg hover:bg-white/5 text-slate-500">&times;</button>
       </div>
       <div class="space-y-3 text-sm">
-        <div class="flex gap-2"><span class="text-slate-500 w-24 shrink-0">Employee:</span><span class="text-slate-200">${data.employees?.name || 'N/A'} — ${data.employees?.title || ''}</span></div>
+        <div class="flex gap-2"><span class="text-slate-500 w-24 shrink-0">Employee:</span><span class="text-slate-200">${data.employee?.name || 'N/A'} — ${data.employee?.title || ''}</span></div>
         <div class="flex gap-2"><span class="text-slate-500 w-24 shrink-0">Department:</span><span class="text-ags-teal">${data.departments?.name || 'N/A'}</span></div>
         <div class="flex gap-2"><span class="text-slate-500 w-24 shrink-0">Expenditure:</span><span class="text-amber-400 font-semibold editable-field" contenteditable="true" data-field="expenditure">EGP ${origExpenditure.toLocaleString()}</span></div>
         <div class="flex gap-2"><span class="text-slate-500 w-24 shrink-0">Date:</span><span class="text-slate-300">${formatDate(data.created_at)}</span></div>
