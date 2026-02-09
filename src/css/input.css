@@ -63,26 +63,6 @@ body {
 
 /* ─── Responsive Header ──────────────────────────────────────────────────── */
 @media (max-width: 640px) {
-  .header-inner {
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    padding: 0.75rem 1rem;
-  }
-  .header-nav {
-    order: 3;
-    width: 100%;
-    justify-content: center;
-    gap: 0.75rem;
-  }
-  .header-nav .nav-text {
-    display: none;
-  }
-  .header-brand h1 {
-    font-size: 1rem;
-  }
-  .header-brand p {
-    font-size: 0.6rem;
-  }
   .stats-grid {
     grid-template-columns: repeat(2, 1fr) !important;
   }
