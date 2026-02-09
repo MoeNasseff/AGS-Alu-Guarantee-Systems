@@ -208,7 +208,7 @@ async function viewNote(id) {
       <div id="noteSaveBar" class="note-save-bar mt-4 pt-3 border-t border-ags-border flex justify-end" style="display:none; opacity:0; transition: opacity 0.25s ease;">
         <button id="noteSaveBtn" class="px-5 py-2 rounded-xl text-sm font-medium text-white bg-gradient-to-r from-ags-teal to-ags-teal-dark hover:from-ags-teal-dark hover:to-ags-teal transition-all shadow-lg shadow-ags-teal/20 flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-          Save Changes
+          Save
         </button>
       </div>
     </div>`;
@@ -269,7 +269,7 @@ async function viewNote(id) {
     if (error) {
       showToast('Failed to save: ' + error.message, 'error');
       saveBtn.disabled = false;
-      saveBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save Changes';
+      saveBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save';
       return;
     }
 
