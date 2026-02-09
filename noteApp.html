@@ -32,11 +32,11 @@
           <span class="hidden sm:inline">Reminder App</span>
         </a>
         <div class="w-px h-8 bg-ags-border hidden sm:block"></div>
-        <div class="flex items-center gap-2 sm:gap-3">
-          <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-ags-teal/20 flex items-center justify-center">
+        <div class="relative flex items-center gap-2 sm:gap-3">
+          <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-ags-teal/20 flex items-center justify-center pointer-events-none">
             <i data-lucide="user" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-ags-teal"></i>
           </div>
-          <select id="currentUser" class="hidden sm:block bg-transparent border-none text-sm text-slate-300 focus:outline-none cursor-pointer">
+          <select id="currentUser" class="absolute sm:relative left-0 top-0 w-7 h-7 sm:w-auto sm:h-auto opacity-0 sm:opacity-100 bg-transparent border-none text-sm text-slate-300 focus:outline-none cursor-pointer">
           </select>
         </div>
       </div>
