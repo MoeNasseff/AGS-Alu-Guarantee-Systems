@@ -36,11 +36,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // ─── Load Employees ─────────────────────────────────────────────────────────
 async function loadEmployees() {
-  const { data } = await supabase.from('employees').select('*').order('name');
+  const { data, error } = await supabase.from('employees').select('*').order('name');
+  if (error) {
+    console.error('Failed to load employees:', error);
+    showToast('Failed to load employees', 'error');
+    return;
+  }
   employees = data || [];
+  console.log(`Loaded ${employees.length} employees`);
   const select = document.getElementById('meetCreatedBy');
   employees.forEach(e => {
-    select.innerHTML += `<option value="${e.id}">${e.name} — ${e.title}</option>`;
+    const opt = document.createElement('option');
+    opt.value = e.id;
+    opt.textContent = `${e.name} — ${e.title}`;
+    select.appendChild(opt);
   });
 }
 

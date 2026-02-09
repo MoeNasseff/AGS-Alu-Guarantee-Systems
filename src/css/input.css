@@ -58,6 +58,66 @@
 
 body {
   background: #0a1220;
+  color-scheme: dark;
+}
+
+/* ─── Responsive Header ──────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .header-inner {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+  }
+  .header-nav {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    gap: 0.75rem;
+  }
+  .header-nav .nav-text {
+    display: none;
+  }
+  .header-brand h1 {
+    font-size: 1rem;
+  }
+  .header-brand p {
+    font-size: 0.6rem;
+  }
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .tabs-row {
+    gap: 0.25rem;
+  }
+  .tabs-row button {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+  }
+  .tabs-row button i {
+    display: none;
+  }
+  .main-content {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-top: 1.25rem;
+  }
+  .form-grid-2 {
+    grid-template-columns: 1fr !important;
+  }
+  .form-grid-3 {
+    grid-template-columns: 1fr !important;
+  }
+  .form-grid-4 {
+    grid-template-columns: 1fr !important;
+  }
+  .form-grid-4 .md\:col-span-3 {
+    grid-column: span 1;
+  }
+  .footer-inner {
+    flex-direction: column;
+    gap: 0.5rem;
+    text-align: center;
+  }
 }
 
 /* ─── Custom Scrollbar ───────────────────────────────────────────────────── */

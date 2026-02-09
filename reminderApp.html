@@ -15,22 +15,20 @@
 
   <!-- Header -->
   <header class="sticky top-0 z-40 glass border-b border-ags-border">
-    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-      <div class="flex items-center gap-4">
-        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-ags-teal to-ags-teal-dark flex items-center justify-center">
-          <span class="text-white font-extrabold text-lg">A</span>
-        </div>
+    <div class="header-inner max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+      <div class="header-brand flex items-center gap-3 sm:gap-4">
+        <img src="assets/img/logo.png" alt="AGS Logo" class="h-8 sm:h-10 w-auto">
         <div>
-          <h1 class="text-xl font-bold text-white tracking-tight">ALU-REMINDERAPP</h1>
-          <p class="text-xs text-slate-500 tracking-widest uppercase">Meeting & Reminder Manager</p>
+          <h1 class="text-base sm:text-xl font-bold text-white tracking-tight">ALU-REMINDERAPP</h1>
+          <p class="text-[0.6rem] sm:text-xs text-slate-500 tracking-widest uppercase">Meeting & Reminder Manager</p>
         </div>
       </div>
-      <div class="flex items-center gap-4">
-        <a href="noteApp.html" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-ags-navy-light border border-ags-border hover:border-ags-teal/30 transition-all text-sm text-slate-400 hover:text-ags-teal">
-          <i data-lucide="file-text" class="w-4 h-4"></i>
-          <span>Note App</span>
+      <div class="header-nav flex items-center gap-2 sm:gap-4">
+        <a href="noteApp.html" class="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-ags-navy-light border border-ags-border hover:border-ags-teal/30 transition-all text-sm text-slate-400 hover:text-ags-teal" title="Note App">
+          <i data-lucide="file-text" class="w-4 h-4 shrink-0"></i>
+          <span class="nav-text hidden sm:inline">Note App</span>
         </a>
-        <div class="w-px h-8 bg-ags-border"></div>
+        <div class="w-px h-8 bg-ags-border hidden sm:block"></div>
         <div class="flex items-center gap-2">
           <div class="flex -space-x-1">
             <div class="w-6 h-6 rounded-full bg-[#25d366]/20 flex items-center justify-center" title="WhatsApp Bot">
@@ -40,17 +38,17 @@
               <svg class="w-3.5 h-3.5 text-[#229ed9]" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0h-.056zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 01.171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
             </div>
           </div>
-          <span class="text-xs text-slate-500">Bot Connected</span>
+          <span class="text-xs text-slate-500 hidden sm:inline">Bot Connected</span>
         </div>
       </div>
     </div>
   </header>
 
   <!-- Main Content -->
-  <main class="max-w-7xl mx-auto px-6 py-8">
+  <main class="main-content max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
 
     <!-- Stats Row -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 animate-fade-in">
+    <div class="stats-grid grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8 animate-fade-in">
       <div class="glass rounded-xl p-5 card-glow">
         <div class="flex items-center justify-between mb-3">
           <span class="text-xs text-slate-500 uppercase tracking-wider font-medium">Upcoming</span>
@@ -90,15 +88,15 @@
     </div>
 
     <!-- Tabs -->
-    <div class="flex gap-1 mb-6 animate-fade-in" style="animation-delay:0.05s">
-      <button onclick="switchTab('form')" id="tab-form" class="tab-active px-5 py-2.5 rounded-xl text-sm font-medium border transition-all flex items-center gap-2">
-        <i data-lucide="calendar-plus" class="w-4 h-4"></i> New Meeting
+    <div class="tabs-row flex gap-1 sm:gap-2 mb-6 animate-fade-in" style="animation-delay:0.05s">
+      <button onclick="switchTab('form')" id="tab-form" class="tab-active px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-medium border transition-all flex items-center justify-center gap-2 whitespace-nowrap">
+        <i data-lucide="calendar-plus" class="w-4 h-4 hidden sm:block"></i> New Meeting
       </button>
-      <button onclick="switchTab('list')" id="tab-list" class="tab-inactive px-5 py-2.5 rounded-xl text-sm font-medium border transition-all flex items-center gap-2">
-        <i data-lucide="list" class="w-4 h-4"></i> All Meetings
+      <button onclick="switchTab('list')" id="tab-list" class="tab-inactive px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-medium border transition-all flex items-center justify-center gap-2 whitespace-nowrap">
+        <i data-lucide="list" class="w-4 h-4 hidden sm:block"></i> All Meetings
       </button>
-      <button onclick="switchTab('bot')" id="tab-bot" class="tab-inactive px-5 py-2.5 rounded-xl text-sm font-medium border transition-all flex items-center gap-2">
-        <i data-lucide="message-circle" class="w-4 h-4"></i> Bot Instructions
+      <button onclick="switchTab('bot')" id="tab-bot" class="tab-inactive px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-medium border transition-all flex items-center justify-center gap-2 whitespace-nowrap">
+        <i data-lucide="message-circle" class="w-4 h-4 hidden sm:block"></i> Bot Instructions
       </button>
     </div>
 
@@ -112,7 +110,7 @@
       </div>
 
       <form id="meetingForm" class="space-y-5">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div class="form-grid-2 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
           <!-- Meeting Title -->
           <div>
             <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Meeting Title</label>
@@ -125,7 +123,7 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div class="form-grid-3 grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
           <!-- Contact Person -->
           <div>
             <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Contact Person</label>
@@ -143,7 +141,7 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div class="form-grid-2 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
           <!-- Location Name -->
           <div>
             <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Location</label>
@@ -156,7 +154,7 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
+        <div class="form-grid-4 grid grid-cols-1 md:grid-cols-4 gap-4 sm:gap-5">
           <!-- Meeting Info -->
           <div class="md:col-span-3">
             <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Meeting Details</label>
@@ -311,7 +309,7 @@
 
   <!-- Footer -->
   <footer class="mt-12 border-t border-ags-border py-6">
-    <div class="max-w-7xl mx-auto px-6 flex items-center justify-between text-xs text-slate-600">
+    <div class="footer-inner max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between text-xs text-slate-600">
       <span>&copy; 2026 AGS - Alu-Guarantee Systems. All rights reserved.</span>
       <span>ALU-REMINDERAPP v1.0</span>
     </div>
