@@ -181,27 +181,102 @@ async function viewNote(id) {
 
   if (!data) return;
 
+  // Store original values for change detection
+  const origTitle = data.title || '';
+  const origExpenditure = parseFloat(data.expenditure || 0);
+  const origContent = data.note_content || '';
+
   const overlay = document.createElement('div');
   overlay.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm';
   overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
   overlay.innerHTML = `
     <div class="glass rounded-2xl p-6 max-w-lg w-full mx-4 animate-fade-in">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-semibold text-white">${escapeHtml(data.title)}</h3>
+        <h3 class="text-lg font-semibold text-white editable-field" contenteditable="true" data-field="title">${escapeHtml(origTitle)}</h3>
         <button onclick="this.closest('.fixed').remove()" class="p-1 rounded-lg hover:bg-white/5 text-slate-500">&times;</button>
       </div>
       <div class="space-y-3 text-sm">
         <div class="flex gap-2"><span class="text-slate-500 w-24 shrink-0">Employee:</span><span class="text-slate-200">${data.employees?.name || 'N/A'} — ${data.employees?.title || ''}</span></div>
         <div class="flex gap-2"><span class="text-slate-500 w-24 shrink-0">Department:</span><span class="text-ags-teal">${data.departments?.name || 'N/A'}</span></div>
-        <div class="flex gap-2"><span class="text-slate-500 w-24 shrink-0">Expenditure:</span><span class="text-amber-400 font-semibold">EGP ${parseFloat(data.expenditure || 0).toLocaleString()}</span></div>
+        <div class="flex gap-2"><span class="text-slate-500 w-24 shrink-0">Expenditure:</span><span class="text-amber-400 font-semibold editable-field" contenteditable="true" data-field="expenditure">EGP ${origExpenditure.toLocaleString()}</span></div>
         <div class="flex gap-2"><span class="text-slate-500 w-24 shrink-0">Date:</span><span class="text-slate-300">${formatDate(data.created_at)}</span></div>
         <div class="pt-2 border-t border-ags-border">
           <span class="text-slate-500 text-xs uppercase tracking-wider">Note Content</span>
-          <p class="mt-2 text-slate-300 leading-relaxed">${escapeHtml(data.note_content || '')}</p>
+          <p class="mt-2 text-slate-300 leading-relaxed editable-field" contenteditable="true" data-field="note_content">${escapeHtml(origContent)}</p>
         </div>
+      </div>
+      <div id="noteSaveBar" class="note-save-bar mt-4 pt-3 border-t border-ags-border flex justify-end" style="display:none; opacity:0; transition: opacity 0.25s ease;">
+        <button id="noteSaveBtn" class="px-5 py-2 rounded-xl text-sm font-medium text-white bg-gradient-to-r from-ags-teal to-ags-teal-dark hover:from-ags-teal-dark hover:to-ags-teal transition-all shadow-lg shadow-ags-teal/20 flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Save Changes
+        </button>
       </div>
     </div>`;
   document.body.appendChild(overlay);
+
+  // --- Change detection & save wiring ---
+  const saveBar = overlay.querySelector('#noteSaveBar');
+  const saveBtn = overlay.querySelector('#noteSaveBtn');
+  const editableFields = overlay.querySelectorAll('.editable-field');
+
+  /** Checks if any editable field differs from its original value. */
+  function hasChanges() {
+    const curTitle = overlay.querySelector('[data-field="title"]').textContent.trim();
+    const curExp = parseFloat(overlay.querySelector('[data-field="expenditure"]').textContent.replace(/[^0-9.-]/g, '')) || 0;
+    const curContent = overlay.querySelector('[data-field="note_content"]').textContent.trim();
+    return curTitle !== origTitle || curExp !== origExpenditure || curContent !== origContent;
+  }
+
+  /** Shows or hides the save bar based on change state. */
+  function checkChanges() {
+    if (hasChanges()) {
+      saveBar.style.display = 'flex';
+      requestAnimationFrame(() => { saveBar.style.opacity = '1'; });
+    } else {
+      saveBar.style.opacity = '0';
+      setTimeout(() => { saveBar.style.display = 'none'; }, 250);
+    }
+  }
+
+  // Listen for input on all editable fields
+  editableFields.forEach(el => {
+    el.addEventListener('input', checkChanges);
+    // Prevent Enter from creating new lines in title/expenditure
+    if (el.dataset.field !== 'note_content') {
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+      });
+    }
+  });
+
+  // Save handler
+  saveBtn.addEventListener('click', async () => {
+    const newTitle = overlay.querySelector('[data-field="title"]').textContent.trim();
+    const newExp = parseFloat(overlay.querySelector('[data-field="expenditure"]').textContent.replace(/[^0-9.-]/g, '')) || 0;
+    const newContent = overlay.querySelector('[data-field="note_content"]').textContent.trim();
+
+    if (!newTitle) { showToast('Title cannot be empty', 'error'); return; }
+
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Saving...';
+
+    const { error } = await sb.from('notes').update({
+      title: newTitle,
+      expenditure: newExp,
+      note_content: newContent
+    }).eq('id', id);
+
+    if (error) {
+      showToast('Failed to save: ' + error.message, 'error');
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save Changes';
+      return;
+    }
+
+    showToast('Note updated', 'success');
+    overlay.remove();
+    await loadNotes();
+  });
 }
 
 // ─── Delete Note ────────────────────────────────────────────────────────────
