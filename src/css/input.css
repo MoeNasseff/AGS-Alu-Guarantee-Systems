@@ -123,6 +123,21 @@ body {
   box-shadow: 0 0 0 3px rgba(59, 168, 191, 0.12);
 }
 
+/* Required field cue: red border + subtle wiggle on invalid */
+.form-input:required:invalid {
+  border-color: #f87171;
+  box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.25);
+  animation: ags-wiggle 0.25s ease;
+}
+
+@keyframes ags-wiggle {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  50% { transform: translateX(3px); }
+  75% { transform: translateX(-2px); }
+  100% { transform: translateX(0); }
+}
+
 /* ─── Animations ─────────────────────────────────────────────────────────── */
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(20px); }

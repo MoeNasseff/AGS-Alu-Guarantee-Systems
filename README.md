@@ -105,5 +105,8 @@ docker-compose up -d                # Start nginx container on port 8080
 - **CP2** (2026-02-09 00:40 UTC+2): Restructured to standard webapp — local assets, Tailwind build, Docker, nginx
   - Revert: `git reset --hard <commit-hash>`
 
+## Future pushes: 
+- use git push origin master or git push nerdxeg master to choose which account.
+
 ---
 *© 2026 AGS - Alu-Guarantee Systems*

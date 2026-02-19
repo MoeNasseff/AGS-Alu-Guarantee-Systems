@@ -18,9 +18,10 @@
 
 ### Deploy n8n
 1. In Railway dashboard, click **"New Project"**
-2. Click **"Deploy a Template"**
-3. Search for **"n8n"** and select the official template
-4. Configure environment variables:
+2. Click **"Docker Image"**
+3. Enter image: `n8nio/n8n:latest`
+4. Click **"Deploy"**
+5. Once deployed, click **"Variables"** tab and add these environment variables:
    ```
    N8N_BASIC_AUTH_ACTIVE=true
    N8N_BASIC_AUTH_USER=admin
@@ -28,11 +29,11 @@
    N8N_PROTOCOL=https
    WEBHOOK_URL=https://<your-railway-domain>
    ```
-5. Click **"Deploy"** — wait 2-3 minutes
-6. Once deployed, click **"Settings"** → **"Networking"** → **"Generate Domain"**
-7. Copy the generated URL (e.g., `https://n8n-production-xxxx.up.railway.app`)
-8. Update `WEBHOOK_URL` env var to match this domain
-9. Open the URL — login with admin credentials you set
+6. Click **"Deploy"** — wait 2-3 minutes
+7. Once deployed, click **"Settings"** → **"Networking"** → **"Generate Domain"**
+8. Copy the generated URL (e.g., `https://n8n-production-xxxx.up.railway.app`)
+9. Update `WEBHOOK_URL` env var to match this domain
+10. Open the URL — login with admin credentials you set
 
 > **Save this URL** — you'll need it for Telegram webhook and WhatsApp webhook configuration.
 
